@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta name="Print Spot" content="Print spot pages" />
+  <meta charset="utf-8">
+  <title>Print Spot</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="css/style.css">
+
+  <script src="http://code.jquery.com/jquery-latest.min.js"></script>
+
+  <script src="https://bossanova.uk/jspreadsheet/v4/jexcel.js"></script>
+  <script src="https://jsuites.net/v4/jsuites.js"></script>
+  <link rel="stylesheet" href="https://bossanova.uk/jspreadsheet/v4/jexcel.css" type="text/css" />
+  <link rel="stylesheet" href="https://jsuites.net/v4/jsuites.css" type="text/css" />
+</head>
+
+<body>
+
+
+
+
+  <div id="container">
+    <h2> Spot printing </h2>
+
+  <div id="spreadsheet"> </div>
+
+
+
+
+
+  <div id="parameters_div">
+
+    <label for="top_to_spot"> Distance T (cm): </label>  <input type="number" id="top_to_spot" name="top_to_spot" value="0.95">  </input> <br>
+    <label for="left_to_spot"> Distance L (cm): </label>  <input type="number" id="left_to_spot" name="left_to_spot" value="1.1">  </input> <br>
+    <label for="dist_spot_h"> Distance H (cm): </label>  <input type="number" id="dist_spot_h" name="dist_spot_h" value="0.646">  </input> <br>
+    <label for="dist_spot_w"> Distance W (cm): </label>  <input type="number" id="dist_spot_w" name="dist_spot_w" value="0.646">  </input> <br>
+    <label for="diameter_spot"> Distance D (cm): </label>  <input type="number" id="diameter_spot" name="diameter_spot" value="0.9525">  </input> <br>
+    <label for="font_size"> Font Size (px): </label>  <input type="number" id="font_size"  name="font_size" value=8>  </input> <br>
+    <label for="test_print"> Test page ? </label> <input type="checkbox" id="test_print"> </input>
+    <br>
+    <br>
+
+    <p> Fill the spreadsheet, adapt the parameter to your spot page then click "Spot !" and print the page using your navigator (US-letter format, scale=100, no margins). </p>
+      <p>
+
+      Checking the "Test page" box will also print the circles and a 0.5 cm border, it's useful for trouble-shooting (usually necessary, sadly).
+
+    </p>
+    <br>
+    <br>
+
+
+    <input type="button" id="run_button" value="Spot !" onclick="go_print()"/>
+  </div>
+  <div id="parameters_description">
+    <img src="instructions.png" alt="D is the diameter of the spot, L the left margin of the sheet, T the top margin of the sheet, W the horizontal distance between spots and H the vertical distance between spots" id="instructions"/>
+  </div>
+
+</div>
+
+<script>
+
+  
+  var table = jspreadsheet(document.getElementById('spreadsheet'), {
+      minDimensions:[5,5],
+  });
+
+  $('test_print')
+
+
+  function go_print() {
+      sessionStorage.setItem("font_size", $("#font_size").val());
+      sessionStorage.setItem("top_to_spot", $("#top_to_spot").val());
+      sessionStorage.setItem("left_to_spot", $("#left_to_spot").val());
+      sessionStorage.setItem("dist_spot_h", $("#dist_spot_h").val());
+      sessionStorage.setItem("dist_spot_w", $("#dist_spot_w").val());
+      sessionStorage.setItem("diameter_spot", $("#diameter_spot").val());
+      sessionStorage.setItem("test_print", $("#test_print").is(':checked'));
+      
+      sessionStorage.setItem("full_table", JSON.stringify(table.getJson()));
+      location.href = "print.html";
+      console.log(JSON.stringify(table.getJson()));
+  }
+  
+</script>
+
+
+
+</body>
+</html>

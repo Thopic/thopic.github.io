@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta name="Print Spot" content="Print spot pages" />
+  <meta charset="utf-8">
+  <title>Print Spot</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" media="print" href="css/print.css" />
+  <script src="http://code.jquery.com/jquery-latest.min.js"></script>
+  <script src="https://bossanova.uk/jspreadsheet/v4/jexcel.js"></script>
+  <script src="https://jsuites.net/v4/jsuites.js"></script>
+  <link rel="stylesheet" href="https://bossanova.uk/jspreadsheet/v4/jexcel.css" type="text/css" />
+  <link rel="stylesheet" href="https://jsuites.net/v4/jsuites.css" type="text/css" />
+</head>
+
+<body>
+
+
+
+
+<div id="box">
+
+</div>
+
+
+
+
+<script>
+  function get () {
+      var font_size = parseFloat(sessionStorage.getItem("font_size"));
+      var dist_spot_h = parseFloat(sessionStorage.getItem("dist_spot_h"));
+      var dist_spot_w = parseFloat(sessionStorage.getItem("dist_spot_w"));
+      var diameter_spot = parseFloat(sessionStorage.getItem("diameter_spot"));
+      var top_to_spot = parseFloat(sessionStorage.getItem("top_to_spot"));
+      var left_to_spot = parseFloat(sessionStorage.getItem("left_to_spot"));
+      var testpage = sessionStorage.getItem("test_print") == "true";
+
+      if(testpage){
+          $('#box').css({"border": "solid",
+                         "border-width": "1px"})
+          var ruler = $("<div>", {id:'ruler'})
+          ruler.html("←0.5cm→")
+          $("#box").append(ruler)
+      }
+
+      var table = JSON.parse(sessionStorage.getItem("full_table"));
+      var hsize = Object.keys(table[0]).length;
+
+      
+      for (let i = 0 ; i < table.length ; i++){
+          for (let j = 0 ; j < hsize ; j++){
+              console.log((top_to_spot + i*(diameter_spot + dist_spot_h)) + "cm")
+              var circle = {
+                  id:"c"+ i + j,
+                  class: "circle"};
+              var circle = $("<div>", circle);
+              circle.css({
+                  "position": "absolute",
+                  "border-style": (testpage ? "solid" : "none"),
+                  "top":  top_to_spot + i*(diameter_spot + dist_spot_h) + "cm",
+                  "left":  left_to_spot + j*(diameter_spot + dist_spot_w) + "cm",
+                  "color": "black",
+                  "font-size": font_size + "px",
+                  "width": diameter_spot + "cm",
+                  "height": diameter_spot + "cm",
+              });
+              circle.html(table[i][j]);
+              $("#box").append(circle);
+          }
+      }
+      
+      console.log(table);
+      
+  }
+  window.onload = function() {
+      get();
+  };
+
+</script>
+
+</body>
+</html>
