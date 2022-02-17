@@ -6,7 +6,9 @@
     display: flex;
     border-style: solid;
     border-width: 1px;
-    word-wrap:break-word;
+    flex-wrap: nowrap;
+    overflow-wrap: break-word;
+    white-space: normal;
 }
 
 
