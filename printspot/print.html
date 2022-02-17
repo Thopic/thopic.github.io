@@ -34,6 +34,7 @@
       var diameter_spot = parseFloat(sessionStorage.getItem("diameter_spot"));
       var top_to_spot = parseFloat(sessionStorage.getItem("top_to_spot"));
       var left_to_spot = parseFloat(sessionStorage.getItem("left_to_spot"));
+      var isbold = sessionStorage.getItem("is_bold") == "true";
       var testpage = sessionStorage.getItem("test_print") == "true";
 
       if(testpage){
@@ -65,7 +66,8 @@
                   "width": diameter_spot + "cm",
                   "height": diameter_spot + "cm",
                   "min-width": "1%",
-                  "overflow-wrap": "anywhere"
+                  "overflow-wrap": "anywhere",
+                  "font-weight": (isbold ? "bold" : "normal"),
               });
               circle.html(table[i][j]);
               $("#box").append(circle);

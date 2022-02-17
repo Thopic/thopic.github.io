@@ -38,6 +38,7 @@
     <label for="dist_spot_w"> Distance W (cm): </label>  <input type="number" id="dist_spot_w" name="dist_spot_w" value="0.646">  </input> <br>
     <label for="diameter_spot"> Distance D (cm): </label>  <input type="number" id="diameter_spot" name="diameter_spot" value="0.9525">  </input> <br>
     <label for="font_size"> Font Size (px): </label>  <input type="number" id="font_size"  name="font_size" value=8>  </input> <br>
+    <label for="is_bold"> Bold text ? </label> <input type="checkbox" id="is_bold"> </input> <br>
     <label for="test_print"> Test page ? </label> <input type="checkbox" id="test_print"> </input>
     <br>
     <br>
@@ -77,6 +78,7 @@
       sessionStorage.setItem("dist_spot_h", $("#dist_spot_h").val());
       sessionStorage.setItem("dist_spot_w", $("#dist_spot_w").val());
       sessionStorage.setItem("diameter_spot", $("#diameter_spot").val());
+      sessionStorage.setItem("is_bold", $("#is_bold").is(':checked'));
       sessionStorage.setItem("test_print", $("#test_print").is(':checked'));
       
       sessionStorage.setItem("full_table", JSON.stringify(table.getJson()));
