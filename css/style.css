@@ -59,3 +59,15 @@ a:hover {
     margin-bottom:3rem;
     /*background-color:#8A89C0;*/
 }
+
+div.bibbase{
+
+}
+
+a.bibbase.author.link{
+    font-weight: bold;
+}
+
+.bibbase_group {
+    background-color: #FFFCF9;
+}
