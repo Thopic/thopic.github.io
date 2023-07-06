@@ -45,6 +45,7 @@ h1 {
     margin-left: auto;
 }
 
+
 a:hover {
     color:#048A81!important;
 }
@@ -70,4 +71,40 @@ a.bibbase.author.link{
 
 .bibbase_group {
     background-color: #FFFCF9;
+}
+
+
+.responsive-image {
+    width: 50%;
+    height: auto; /* maintain aspect ratio */
+    margin: 0 auto; /* center image horizontally */
+    display: block; /* necessary for centering */
+    margin-bottom: 4em;
+}
+
+
+@media screen and (max-width: 992px) { /* 'lg' breakpoint in Bootstrap is 992px */
+  .nav-link {
+    text-align: center;
+  }
+}
+
+@media screen and (max-width: 600px) {
+  body {
+    font-size: small; /* or another size that looks good */
+  }
+  .responsive-image {
+      width: 100%;
+  }
+  #content {
+      width: 95%;
+      padding-right: 1rem;
+      padding-left: 1rem;
+  }
+
+}
+
+
+a[href="//bibbase.org"]::parent {
+    display: none;
 }
