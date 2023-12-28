@@ -1,0 +1,14 @@
+{
+  "name": "ihor_wasm",
+  "version": "0.1.0",
+  "files": [
+    "ihor_wasm_bg.wasm",
+    "ihor_wasm.js",
+    "ihor_wasm.d.ts"
+  ],
+  "module": "ihor_wasm.js",
+  "types": "ihor_wasm.d.ts",
+  "sideEffects": [
+    "./snippets/*"
+  ]
+}
