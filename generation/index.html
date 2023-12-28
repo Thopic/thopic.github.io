@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en-US">
+  <head>
+    <meta charset="utf-8" />
+    <title>hello-wasm example</title>
+  </head>
+  <body>
+    <button id="generate-sequence">Generate CDR3</button>
+    <div id="sequences"></div>
+    <script type="module">
+
+
+
+      import init, { greet, generate_sequence } from "./pkg/ihor_wasm.js";
+
+      init().then(async () => {
+	  await greet("WebAssembly");
+document.getElementById("generate-sequence").addEventListener("click", () => {
+    const sequence = generate_sequence();
+    const sequencesDiv = document.getElementById("sequences");
+    sequencesDiv.innerHTML += sequence + "<br>"; // Append the sequence with a line break
+  });
+      });
+
+    </script>
+  </body>
+</html>
