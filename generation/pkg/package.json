@@ -1,13 +1,13 @@
 {
-  "name": "ihor_wasm",
+  "name": "righor-web",
   "version": "0.1.0",
   "files": [
-    "ihor_wasm_bg.wasm",
-    "ihor_wasm.js",
-    "ihor_wasm.d.ts"
+    "righor_web_bg.wasm",
+    "righor_web.js",
+    "righor_web.d.ts"
   ],
-  "module": "ihor_wasm.js",
-  "types": "ihor_wasm.d.ts",
+  "module": "righor_web.js",
+  "types": "righor_web.d.ts",
   "sideEffects": [
     "./snippets/*"
   ]
