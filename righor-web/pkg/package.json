@@ -1,0 +1,14 @@
+{
+  "name": "righor-web",
+  "version": "0.1.0",
+  "files": [
+    "righor_web_bg.wasm",
+    "righor_web.js",
+    "righor_web.d.ts"
+  ],
+  "module": "righor_web.js",
+  "types": "righor_web.d.ts",
+  "sideEffects": [
+    "./snippets/*"
+  ]
+}
