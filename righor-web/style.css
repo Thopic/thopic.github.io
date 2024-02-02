@@ -1,0 +1,86 @@
+#content {
+    width: 800px; /* Fixed width */
+    margin: 0 auto; /* Center the div */
+}
+
+#spreadsheet {
+    width: 800px;
+    max-height: 300px; /* Maximum height */
+    overflow-y: auto; /* Enable vertical scrolling */
+    margin-left:5px;
+
+}
+
+#representation {
+    margin-top:20px;
+    width: 800px;
+    display: flex;
+
+}
+
+#alignment {
+    font-family: 'Fira Code', monospace;
+    overflow-x: auto; /* Enable vertical scrolling */
+    max-width: 700px;
+    white-space: pre; /* Needed so that the white spaces are not removed */
+}
+
+#names_alignment {
+    width:85px;
+    text-align: right;
+    margin-right: 15px;
+}
+
+body {
+    font-family: 'Roboto', sans-serif;
+}
+
+table.jexcel colgroup col:first-child {
+    width: 0 !important;
+}
+
+#spreadsheet .jexcel tbody td{
+    font-size: 10px;
+    font-family: 'Fira Code', monospace;
+}
+
+
+
+#header {
+    width: 800px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px;
+
+}
+
+#model_choice, #generate, #evaluate {
+  flex: 1; /* Each child will take up equal amount of space */
+}
+
+#generate {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+#generate input[type="number"] {
+  width: 30%; /* Makes the input form shorter */
+  padding: 5px;
+  margin-left: 10px; /* Adds space between the link and the input */
+}
+
+a {
+  text-decoration: none;
+  color: black;
+  background-color: #f8f9fa; /* Light background color for the link */
+  padding: 5px 10px;
+  border-radius: 5px; /* Rounded corners for the link */
+  border: 1px solid #dee2e6; /* Light border color */
+}
+
+a:hover {
+  background-color: #e2e6ea; /* Slightly darker background on hover */
+  color: #0056b3; /* Darker link color on hover */
+}
