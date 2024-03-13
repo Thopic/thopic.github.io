@@ -69,17 +69,18 @@ export interface InitOutput {
   readonly resultjs_pos_start_cdr3: (a: number) => number;
   readonly resultjs_cdr3_pos_string: (a: number, b: number) => void;
   readonly wrappedmodel_initialize: () => number;
-  readonly wrappedmodel_generate: (a: number) => void;
+  readonly wrappedmodel_load_model: (a: number, b: number, c: number, d: number) => number;
+  readonly wrappedmodel_generate: (a: number, b: number) => void;
   readonly wrappedmodel_evaluate: (a: number, b: number, c: number) => void;
   readonly fetch_file: (a: number, b: number) => number;
   readonly __wbindgen_malloc: (a: number, b: number) => number;
   readonly __wbindgen_realloc: (a: number, b: number, c: number, d: number) => number;
   readonly __wbindgen_export_2: WebAssembly.Table;
-  readonly wasm_bindgen__convert__closures__invoke1_mut__hc0828e02b11cd9d0: (a: number, b: number, c: number) => void;
+  readonly wasm_bindgen__convert__closures__invoke1_mut__h31b799c0ba683a3f: (a: number, b: number, c: number) => void;
   readonly __wbindgen_add_to_stack_pointer: (a: number) => number;
   readonly __wbindgen_free: (a: number, b: number, c: number) => void;
   readonly __wbindgen_exn_store: (a: number) => void;
-  readonly wasm_bindgen__convert__closures__invoke2_mut__h2be56e704f574ca8: (a: number, b: number, c: number, d: number) => void;
+  readonly wasm_bindgen__convert__closures__invoke2_mut__h0f6d768d0ffb232d: (a: number, b: number, c: number, d: number) => void;
 }
 
 export type SyncInitInput = BufferSource | WebAssembly.Module;
