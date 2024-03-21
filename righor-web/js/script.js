@@ -134,7 +134,7 @@ function load_menu() {
 
   // Mapping of species to chains
   const speciesToChains = {
-    'human': ['TRα', 'TRβ', 'IGH', 'IGL'],
+    'human': ['TRα', 'TRβ', 'IGH', 'IGλ', 'IGκ'],
     'mouse': ['TRα', 'TRβ'],
     // Add more mappings as needed
   };
