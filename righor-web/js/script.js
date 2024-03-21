@@ -140,10 +140,11 @@ function load_menu() {
   };
 
   const chainToId = {
-    'TRα': 'tra',
-    'TRβ': 'trb',
-    'IGH': 'igh',
-    'IGL': 'igl'
+    'TRα': 't_alpha',
+    'TRβ': 't_beta',
+    'IGH': 'b_heavy',
+    'IGλ': 'b_lambda',
+    'IGκ': 'b_lambda'
   }
 
   // Toggle species menu display
