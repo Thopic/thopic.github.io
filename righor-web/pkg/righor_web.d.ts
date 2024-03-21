@@ -70,8 +70,9 @@ export interface InitOutput {
   readonly resultjs_cdr3_pos_string: (a: number, b: number) => void;
   readonly wrappedmodel_initialize: () => number;
   readonly wrappedmodel_load_model: (a: number, b: number, c: number, d: number) => number;
-  readonly wrappedmodel_generate: (a: number, b: number) => void;
-  readonly wrappedmodel_evaluate: (a: number, b: number, c: number) => void;
+  readonly wrappedmodel_generate: (a: number) => number;
+  readonly wrappedmodel_evaluate: (a: number, b: number) => number;
+  readonly wrappedmodel_evaluate_from_cdr3: (a: number, b: number, c: number, d: number, e: number, f: number) => number;
   readonly fetch_file: (a: number, b: number) => number;
   readonly __wbindgen_malloc: (a: number, b: number) => number;
   readonly __wbindgen_realloc: (a: number, b: number, c: number, d: number) => number;

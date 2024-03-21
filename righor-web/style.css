@@ -8,6 +8,7 @@
     max-height: 300px; /* Maximum height */
     overflow-y: auto; /* Enable vertical scrolling */
     margin-left:5px;
+    margin-top:40px;
 
 }
 
@@ -32,6 +33,7 @@
 }
 
 body {
+    font-size: 15px;
     font-family: 'Roboto', sans-serif;
 }
 
@@ -47,16 +49,34 @@ table.jexcel colgroup col:first-child {
 
 
 #header {
-    width: 800px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 10px;
+    z-index: 900; /* Ensure it's above other content */
+    width: 97%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px;
 
 }
 
-#model_choice, #generate, #evaluate {
+#model_choice, #generate {
   flex: 1; /* Each child will take up equal amount of space */
+}
+
+#evaluate {
+    flex: 1;
+    display: flex; /* Aligns the link and loading wheel next to each other */
+    align-items: center; /* Vertically centers the contents */
+    justify-content: flex-end; /* Aligns contents to the right */
+}
+
+.loadingWheel {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 30px; /* Adjust the width as needed */
+  height: 20px; /* Adjust the height as needed */
+  margin-left: 10px; /* Adds some space between the text and the loader */
+  margin-right: 10px; /* Adds some space between the text and the loader */
 }
 
 #generate {
@@ -66,12 +86,20 @@ table.jexcel colgroup col:first-child {
 }
 
 #generate input[type="number"] {
-  width: 30%; /* Makes the input form shorter */
+  width: 50px; /* Makes the input form shorter */
+  padding: 5px;
+  margin-left: 10px; /* Adds space between the link and the input */
+  margin-right: 10px; /* Adds space between the link and the input */
+}
+
+#generate input[type="checkbox"] {
   padding: 5px;
   margin-left: 10px; /* Adds space between the link and the input */
 }
 
-a {
+
+
+#header a {
   text-decoration: none;
   color: black;
   background-color: #f8f9fa; /* Light background color for the link */
@@ -80,7 +108,126 @@ a {
   border: 1px solid #dee2e6; /* Light border color */
 }
 
-a:hover {
+#header a:hover {
   background-color: #e2e6ea; /* Slightly darker background on hover */
   color: #0056b3; /* Darker link color on hover */
+}
+
+.menu {
+  border: 1px solid #ccc;
+  padding: 0px 10px;
+  margin: auto;
+  position: absolute; /* or 'fixed' depending on your layout */
+  background-color: #fff;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+  z-index: 1000; /* High z-index to ensure it's above other content */
+}
+
+.menu div {
+    margin: 0px 5px;
+    padding: 5px 0;
+    cursor: pointer;
+}
+
+
+
+#modelName {
+    margin-left: 5px;
+}
+
+
+
+.loader {
+  border: 4px solid rgba(0, 0, 0, 0.1);
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  border-left-color: #0056b3;
+  animation: spin 1s ease infinite;
+}
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+
+.help-button {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%; /* Makes it circular */
+  background-color: #0056b3;
+  color: white;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 15px;
+  font-family: Arial, sans-serif;
+  padding: 0px 0px;
+  z-index: 3000;
+}
+
+#help-window {
+  position: fixed; /* or absolute, depending on your needs */
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 80%; /* Adjust as needed */
+  max-width: 600px; /* Adjust as needed */
+  padding: 20px;
+  background-color: rgba(255, 255, 255, 0.9); /* Semi-transparent white */
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+  z-index: 2000; /* Ensure it's above other content */
+}
+
+h3 {
+  text-align: center;
+}
+
+.gif-container {
+  width: 450px;
+  height: auto; /* Adjust based on your GIFs' aspect ratio */
+  margin-top: 10px;
+}
+
+.gif {
+  width: 100%;
+  height: auto;
+  display: block; /* Removes bottom margin/spacing */
+  opacity: 0.3; /* Start with a faded look */
+  transition: opacity 0.3s ease; /* Smooth transition */
+  margin: 20px 50px;
+}
+
+.gif:hover {
+  opacity: 1; /* Full opacity on hover */
+}
+
+.gif-container:hover .gif {
+    opacity: 1; /* Ensures hover effect on the container applies to the image */
+}
+
+h3 {
+  margin-top: 0; /* Adjusts spacing at the top of the window */
+}
+
+ul {
+  padding-left: 20px; /* Better alignment for list */
+}
+
+
+#help-window a {
+    color: #337ab7; /* Change the color to whatever you prefer */
+    text-decoration: none; /* Removes underline from links */
+    font-weight: bold; /* Makes the text bold */
+}
+
+#help-window a:hover {
+    text-decoration: underline; /* Adds underline on hover for visual feedback */
+    color: #0056b3; /* Darker shade on hover */
 }
