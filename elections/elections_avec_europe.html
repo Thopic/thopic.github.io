@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <title> Évolution des votes en France métropolitaine entre 1969 et 2024 </title>
+    <style>
+        #overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 4000px;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1;
+        }
+        #help-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 20px;
+        }
+
+	#help-icon {
+	    cursor: pointer;
+	    border: 2px solid black;
+	    border-radius: 50%;
+	    width: 30px;
+	    height: 30px;
+	    text-align: center;
+	    line-height: 30px;
+	    position: relative;
+	    z-index: 2;
+	    font-family: Arial, sans-serif;
+	    font-size: 18px;
+	}
+
+
+	.citation {
+	    font-size: 14px;
+	    font-style: italic;
+	}
+
+    </style>
+</head>
+<body>
+
+<div id="help-icon"><b>? </b></div>
+<div id="overlay">
+    <div id="help-text">
+      <h3> Évolution des votes en France métropolitaine entre 1969 et 2022. </h3>
+Les reports de voix entre candidats sont estimés à partir des données de vote par commune. Essentiellement, on cherche les reports qui prédisent le mieux le vote dans la commune et les communes voisines (détails <a href="suboptimal.fr/2023-09-reelections/">ici</a>). Les votes blancs et les votes nuls sont regroupés avec l'abstention. Les traits gris, qui n'apparaissent qu'au survol, sont considérés comme non significatifs (statistiquement).
+<br/>
+<br/>
+
+Les données utilisées pour ce graphe proviennent de <a href="https://unehistoireduconflitpolitique.fr/">https://unehistoireduconflitpolitique.fr</a>¹.
+<br/>
+<br/>
+
+  <span class="citation">1. Julia Cagé et Thomas Piketty (2023). Une histoire du conflit politique. <em>Élections et inégalités sociales en France</em>, 1789-2022, Paris, Le Seuil.</span>
+
+</div>
+</div>
+<iframe src="test.html" style="width: 3800px; height: 100%; position: absolute; border: none;"></iframe>
+<script>
+document.getElementById("help-icon").addEventListener("click", function() {
+    document.getElementById("overlay").style.display = "block";
+});
+
+document.getElementById("overlay").addEventListener("click", function() {
+    this.style.display = "none";
+});
+</script>
+
+</body>
+</html>
