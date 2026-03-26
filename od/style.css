@@ -26,22 +26,39 @@ h1 {
     font-weight: 700;
 }
 
+.tabs {
+    display: flex;
+    margin-bottom: 1rem;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.tab-button {
+    flex: 1;
+    padding: 0.75rem;
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 1rem;
+    font-weight: 500;
+    color: #4a5568;
+    border-bottom: 2px solid transparent;
+}
+
+.tab-button.active {
+    color: #667eea;
+    border-bottom: 2px solid #667eea;
+}
+
+.tab-content {
+    display: none;
+}
+
 .input-group {
     margin-bottom: 1.25rem;
     text-align: left;
 }
 
-.input-inline {
-    display: flex;
-    gap: 1rem;
-    align-items: center;
-}
-
-.input-inline .input-group {
-    flex: 1;
-}
-
-.input-group label {
+.dilution-label {
     display: block;
     margin-bottom: 0.5rem;
     color: #4a5568;
@@ -49,8 +66,21 @@ h1 {
     font-weight: 500;
 }
 
+.input-inline {
+    display: flex;
+    gap: 1rem;
+}
+
+.input-subgroup {
+    flex: 1;
+}
+
 .input-inline-label {
-    min-width: 120px;
+    display: block;
+    margin-bottom: 0.25rem;
+    color: #4a5568;
+    font-size: 0.75rem;
+    font-weight: 500;
 }
 
 .input-group input {
@@ -67,26 +97,8 @@ h1 {
     outline: none;
 }
 
-#volumeToTake {
+#volumeToTake1, #volumeToTake5, #yeastVolume {
     background-color: #f7fafc;
     font-weight: 600;
     color: #2d3748;
-}
-
-button {
-    width: 100%;
-    padding: 0.875rem;
-    background: linear-gradient(to right, #667eea 0%, #764ba2 100%);
-    color: white;
-    border: none;
-    border-radius: 8px;
-    font-size: 1rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.2s;
-}
-
-button:hover {
-    background: linear-gradient(to right, #5a6fd1 0%, #6e459f 100%);
-    transform: translateY(-2px);
 }
