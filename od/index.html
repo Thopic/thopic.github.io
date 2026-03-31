@@ -38,12 +38,16 @@
                 </div>
             </div>
             <div class="input-group">
-                <label for="volumeToTake1">Volume à prélever (µL) pour 1 mL</label>
-                <input type="text" id="volumeToTake1" readonly>
-            </div>
+	      <label for="volumeToTake">Volume à prélever pour <input type="number" id="targetVolume" value="500" step="1" style="width: 50px; display: inline;"> μL</label>
+	      <div class="result-subgroup">
+		<input type="text" id="volumeToTakeX" readonly> μL de solution et <input type="text" id="liquidToAddX" readonly> μL de milieu
+		</div>
+	    </div>
             <div class="input-group">
-                <label for="volumeToTake5">Volume à prélever (µL) pour 5 mL</label>
-                <input type="text" id="volumeToTake5" readonly>
+              <label for="volumeToTake5">Volume à prélever pour 5 mL</label>
+	      <div class="result-subgroup">
+                <input type="text" id="volumeToTake5" readonly> μL et <input type="text" id="liquidToAdd5" readonly> μL de milieu
+		</div>
             </div>
         </div>
 
@@ -90,25 +94,35 @@
             evt.currentTarget.classList.add("active");
         }
 
-        function calculateDilution() {
-            const neededOD = parseFloat(document.getElementById('neededOD').value.replace(',', '.'));
-            const measuredOD = parseFloat(document.getElementById('measuredOD').value.replace(',', '.'));
-            const volumePut = parseFloat(document.getElementById('volumePut').value);
-            const totalVolume = parseFloat(document.getElementById('totalVolume').value);
+        javascript
+Copy
 
-            if (isNaN(neededOD) || isNaN(measuredOD) || isNaN(volumePut) || isNaN(totalVolume) || measuredOD === 0 || totalVolume === 0) {
-                document.getElementById('volumeToTake1').value = "";
-                document.getElementById('volumeToTake5').value = "";
-                return;
-            }
+      function calculateDilution() {
+	  const neededOD = parseFloat(document.getElementById('neededOD').value.replace(',', '.'));
+	  const measuredOD = parseFloat(document.getElementById('measuredOD').value.replace(',', '.'));
+	  const volumePut = parseFloat(document.getElementById('volumePut').value);
+	  const totalVolume = parseFloat(document.getElementById('totalVolume').value);
+	  const targetVolume = parseFloat(document.getElementById('targetVolume').value);
 
-            const dilutionFactor = totalVolume / volumePut;
-            const adjustedMeasuredOD = measuredOD * dilutionFactor;
-            const volumeToTake1 = (neededOD / adjustedMeasuredOD) * 1000;
+	  if (isNaN(neededOD) || isNaN(measuredOD) || isNaN(volumePut) || isNaN(totalVolume) || isNaN(targetVolume) || measuredOD === 0 || totalVolume === 0) {
+              document.getElementById('volumeToTake').value = "";
+              return;
+	  }
 
-            document.getElementById('volumeToTake1').value = volumeToTake1.toFixed(2);
-            document.getElementById('volumeToTake5').value = (volumeToTake1 * 5).toFixed(2);
-        }
+	  const dilutionFactor = totalVolume / volumePut;
+	  const adjustedMeasuredOD = measuredOD * dilutionFactor;
+	  const volumeToTake = (neededOD / adjustedMeasuredOD) * targetVolume;
+	  const volumeToTake5 = (neededOD / adjustedMeasuredOD) * 5000;
+
+	  document.getElementById('volumeToTakeX').value = volumeToTake.toFixed(0);
+	  document.getElementById('volumeToTake5').value = volumeToTake5.toFixed(0);
+
+	  document.getElementById('liquidToAddX').value = (targetVolume- volumeToTake).toFixed(0);
+	  document.getElementById('liquidToAdd5').value = (5000 - volumeToTake5).toFixed(0);
+
+      }
+
+
 
         function calculateYeast() {
             const desiredVolume = parseFloat(document.getElementById('desiredVolume').value.replace(',', '.'));
