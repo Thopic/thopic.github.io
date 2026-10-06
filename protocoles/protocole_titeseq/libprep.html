@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme-default>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Préparation de librairie — Tite-Seq</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=Roboto+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">Librairie <span>· après le tri</span></div>
+  <nav class="daynav">
+    <a href="index.html">← Protocole de tri</a>
+    <a href="#scale">Échelle</a>
+    <a href="#prep">Préparation</a>
+    <a href="#miniprep">Miniprep</a>
+    <a href="#primers">Amorces</a>
+    <a href="#pcr1">PCR 1</a>
+    <a href="#bead1">Billes 1</a>
+    <a href="#pcr2">PCR 2</a>
+    <a href="#bead2">Gel et billes 2</a>
+    <a href="#pool">Dosage et pooling</a>
+    <a href="#submit">Soumission</a>
+  </nav>
+  <button class="iconbtn" id="themeBtn" type="button">Sombre</button>
+  <button class="iconbtn" id="printBtn" type="button">Imprimer</button>
+  <button class="iconbtn" id="resetBtn" type="button">Réinitialiser</button>
+</header>
+
+<div class="wrap">
+
+<div class="hero">
+  <h1>Des cellules triées aux amplicons indexés</h1>
+  <p class="sub">Chaque fenêtre de tri devient un puits : miniprep, PCR d'indexation en deux tours,
+  nettoyage aux billes, dosage, pooling. Tout est calculé pour le nombre de réactions de votre manip,
+  repris automatiquement de la page de tri si vous l'avez remplie dans ce navigateur.</p>
+  <div id="linkState"></div>
+</div>
+
+<section id="scale">
+  <div class="sechead"><h2>Échelle de la manip</h2><span class="tag" id="nRxnTag"></span></div>
+  <p class="lede">Une réaction par culture récupérée. Tout le reste de la page en découle, y compris les
+  volumes de master mix, le nombre de barrettes et la quantité de billes.</p>
+  <div class="panel">
+    <div class="grid">
+      <label class="f">Réactions<span class="hint">fenêtres séquencées</span>
+        <input type="number" id="nRxn" step="1" min="1"></label>
+      <label class="f">Excédent PCR 1 (%)<span class="hint">le MM est fluide</span>
+        <input type="number" id="over1" step="1"></label>
+      <label class="f">Excédent PCR 2 (%)<span class="hint">le MM KAPA est visqueux</span>
+        <input type="number" id="over2" step="1"></label>
+      <label class="f">Volume mort par puits (µL)<span class="hint">pertes de pipetage</span>
+        <input type="number" id="dead" step="0.5"></label>
+    </div>
+    <div id="scaleOut"></div>
+  </div>
+</section>
+
+<section id="prep">
+  <div class="sechead"><h2>Préparation</h2><span class="tag">à faire la veille</span></div>
+  <div class="twocol">
+    <div class="panel"><h3>Consommables</h3><div id="prepWare"></div></div>
+    <div class="panel"><h3>Réactifs</h3><div id="prepReag"></div></div>
+  </div>
+  <div class="callout">Les amorces s'arrayent la veille, jamais le matin même. C'est la seule étape de
+  cette page où une erreur est invisible jusqu'au démultiplexage.</div>
+</section>
+
+<section id="miniprep">
+  <div class="sechead"><h2>Extraction plasmidique</h2><span class="tag">Zymo yeast miniprep II</span></div>
+  <ol class="steps">
+    <li><span class="t">Récoltez à DO 0,9–1,5.</span> Au-delà, le rendement d'extraction chute et certains
+      puits ne donneront rien d'exploitable.</li>
+    <li><span class="t">Suivez les instructions Zymo</span> avec trois écarts :
+      <ul><li>lavage avec <span class="num" id="washVolTxt">700 µL</span> de tampon de lavage ;</li>
+      <li>étape de séchage de 3 min ajoutée ;</li>
+      <li>élution dans <span class="num" id="elutTxt">18 µL</span> de tampon d'élution TE (kit Geneaid).</li></ul></li>
+    <li><span class="t">Dosez et notez le rendement par puits.</span> C'est la seule mesure du goulot
+      moléculaire de chaque fenêtre, avant que la PCR ne rende le comptage impossible.</li>
+  </ol>
+  <div class="panel">
+    <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(160px,1fr))">
+      <label class="f">Volume d'élution (µL)<input type="number" id="elut" step="1"></label>
+      <label class="f">Matrice par réaction (µL)<input type="number" id="tmpl" step="0.5"></label>
+      <label class="f">Lavage (µL)<input type="number" id="washVol" step="50"></label>
+      <label class="f">Colonnes par kit<span class="hint">50 ou 200</span>
+        <input type="number" id="kitSize" step="50"></label>
+    </div>
+    <div id="minioOut"></div>
+  </div>
+</section>
+
+<section id="primers">
+  <div class="sechead"><h2>Arrayage des amorces</h2><span class="tag">la veille, au P20</span></div>
+  <p class="lede">Les amorces se posent dans les barrettes qui correspondent aux réactions réelles. Faites
+  toutes les amorces colonne d'abord, puis toutes les amorces ligne, en suivant le plan de plaque et en
+  vérifiant à chaque fois. Contrôlez les volumes à la fin : un puits vide se voit, un puits avec la
+  mauvaise amorce ne se voit pas.</p>
+  <div class="tscroll"><table id="primerTable"></table></div>
+  <div class="callout w">Gardez le plan de plaque qui relie chaque puits à son couple d'index et à sa
+  fenêtre de tri. Sans lui, les lectures reviennent sans savoir d'où elles viennent.</div>
+</section>
+
+<section id="pcr1">
+  <div class="sechead"><h2>PCR 1</h2><span class="tag">Q5, 5 cycles</span></div>
+  <p class="lede">Peu de cycles, pour ajouter les régions d'index sans entamer la représentativité. Vortex
+  vitesse 9 partout.</p>
+  <div class="tscroll"><table id="mm1"></table></div>
+  <ol class="steps">
+    <li><span class="t">Alignez les plasmides sur les barrettes</span>, vortexez, centrifugez, puis
+      déposez <span class="num" id="tmplTxt">5 µL</span> par réaction au P20.</li>
+    <li><span class="t">Sortez les billes à température ambiante</span> et mettez l'exhausteur de billes
+      dans la glace.</li>
+    <li><span class="t">Préparez le master mix</span> selon le tableau ci-dessus, vortexez-le bien.</li>
+    <li><span class="t">Distribuez <span class="num" id="mm1Txt">13 µL</span> de MM par puits.</span>
+      Ouvrez tous les bouchons, refermez au fur et à mesure.</li>
+    <li><span class="t">Vortexez chaque barrette</span> en la maintenant, plusieurs fois et vigoureusement,
+      puis centrifugez.</li>
+    <li><span class="t">Lancez le programme</span> <span class="num">DE_RND1_5CYC</span>, sans préchauffage.
+      <ul><li>98 °C 60 s — puis 5 cycles de (98 °C 10 s, 66 °C 30 s, 72 °C 30 s) — 72 °C 120 s</li></ul></li>
+  </ol>
+</section>
+
+<section id="bead1">
+  <div class="sechead"><h2>Nettoyage aux billes 1</h2><span class="tag">1,2×</span></div>
+  <div class="tscroll"><table id="bead1Table"></table></div>
+  <ol class="steps">
+    <li><span class="t">Diluez la réaction</span> avec un volume égal d'eau, vortexez, centrifugez.</li>
+    <li><span class="t">Ajoutez les billes</span>, vortexez, centrifugez.
+      <ul><li>Mélangez une fois à la pipette, attendez avant de chasser pour récupérer toutes les billes
+      du cône.</li>
+      <li>Une seconde de centrifugation : les billes ne doivent pas culotter.</li>
+      <li>5 min de repos avant la plaque magnétique, puis quelques minutes dessus.</li></ul></li>
+    <li><span class="t">Retirez le surnageant au multicanal</span>, le plus lentement possible, cône
+      décollé du fond. Comptez une minute pleine. Quelques billes emportées sont acceptables tant qu'on
+      ne peut pas dire de quel puits elles viennent.</li>
+    <li><span class="t">Lavez une fois</span> à l'EtOH 85 % ou au tampon W2 (EtOH 80 %, Tris 10 mM), puis
+      laissez sécher jusqu'à ce que le dépôt se craquelle.</li>
+    <li><span class="t">Éluez</span>, vortexez, centrifugez, laissez reposer quelques minutes, replacez
+      sur l'aimant et prélevez lentement vers la plaque PCR.</li>
+  </ol>
+</section>
+
+<section id="pcr2">
+  <div class="sechead"><h2>PCR 2</h2><span class="tag">KAPA HiFi</span></div>
+  <p class="lede">À préparer pendant le temps mort du nettoyage aux billes. Le MM est plus visqueux que
+  celui de la PCR 1, d'où un excédent plus généreux.</p>
+  <div class="tscroll"><table id="mm2"></table></div>
+  <ol class="steps">
+    <li><span class="t">Transférez l'éluat</span> dans les barrettes contenant déjà les amorces.</li>
+    <li><span class="t">Ajoutez <span class="num" id="mm2Txt">12 µL</span> de MM par réaction</span> et
+      mélangez à la pipette 10 à 20 fois.</li>
+    <li><span class="t">Lancez le programme</span> <span class="num">KRL ILT2</span>, sans préchauffage.
+      <ul><li>98 °C 30 s — puis <span class="num" id="cyc2Txt">34</span> cycles de (98 °C 20 s, 62 °C 30 s,
+      72 °C 30 s) — 72 °C 5 min</li></ul></li>
+    <li><span class="t">Pendant la PCR</span>, coulez un gel à 1 % au BET et décongelez des billes.
+      Scellez la plaque, tapotez.</li>
+  </ol>
+  <div class="panel">
+    <h3>Nombre de cycles</h3>
+    <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(160px,1fr))">
+      <label class="f">Cycles PCR 2<input type="number" id="cyc2" step="1" min="10" max="40"></label>
+      <label class="f">Rendement miniprep (ng/µL)<span class="hint">médiane des puits</span>
+        <input type="number" id="ngUl" step="0.5"></label>
+      <label class="f">Taille du plasmide (pb)<input type="number" id="plasmidBp" step="100"></label>
+    </div>
+    <div id="cycOut"></div>
+  </div>
+</section>
+
+<section id="bead2">
+  <div class="sechead"><h2>Gel et nettoyage aux billes 2</h2><span class="tag">0,85×</span></div>
+  <ol class="steps">
+    <li><span class="t">Faites tourner le gel.</span> 5 µL de produit + 1 µL de tampon de charge, 120 V
+      pendant 20 min. Avant le nettoyage, le gel est plus sale mais on ne gaspille pas de billes.</li>
+    <li><span class="t">Ajoutez les billes</span> selon le volume restant (tableau ci-dessous), vortexez,
+      centrifugez.</li>
+    <li><span class="t">Lavez une fois</span> à l'EtOH 85 % ou au W2, séchez jusqu'à craquelure.</li>
+    <li><span class="t">Éluez</span> et stockez à −20 °C.</li>
+  </ol>
+  <div class="tscroll"><table id="bead2Table"></table></div>
+  <div id="bead2Note"></div>
+</section>
+
+<section id="pool">
+  <div class="sechead"><h2>Dosage et pooling</h2><span class="tag">AccuGreen, puis Qubit</span></div>
+  <p class="lede">La profondeur se décide ici. Une fenêtre qui contient 50 000 cellules et une qui en
+  contient 2 millions n'ont pas besoin du même nombre de lectures : séquencer la première profondément,
+  c'est relire les mêmes molécules. Les parts ci-dessous sont proportionnelles aux cellules récupérées,
+  et restent modifiables.</p>
+  <div class="panel">
+    <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(160px,1fr))">
+      <label class="f">Lectures disponibles (M)<span class="hint">la flowcell</span>
+        <input type="number" id="totalReads" step="10"></label>
+      <label class="f">Volume minimal pipeté (µL)<input type="number" id="minPip" step="0.5"></label>
+      <label class="f">Volume disponible par puits (µL)<input type="number" id="availUL" step="5"></label>
+      <label class="f">Taille de l'amplicon (pb)<input type="number" id="ampBp" step="10"></label>
+    </div>
+  </div>
+  <div class="tscroll"><table id="poolTable"></table></div>
+  <div id="poolNote"></div>
+  <div class="panel">
+    <h3>Nettoyage double face du pool</h3>
+    <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(150px,1fr))">
+      <label class="f">Volume du pool (µL)<input type="number" id="poolVol" step="10"></label>
+      <label class="f">Coupe basse ×<input type="number" id="cutLow" step="0.05"></label>
+      <label class="f">Coupe haute ×<input type="number" id="cutHigh" step="0.05"></label>
+    </div>
+    <div id="twoSided"></div>
+  </div>
+</section>
+
+<section id="submit">
+  <div class="sechead"><h2>Soumission</h2><span class="tag">10 nM</span></div>
+  <ol class="steps">
+    <li><span class="t">TapeStation</span> (gamme 5000) pour vérifier la taille et l'absence de dimères
+      d'amorces.</li>
+    <li><span class="t">Qubit</span> sur le pool final.</li>
+    <li><span class="t">Diluez à 10 nM</span> selon le calcul ci-dessous.</li>
+    <li><span class="t">Remplissez la feuille d'échantillons.</span> Sur NovaSeq, vérifiez le sens de la
+      lecture d'index 2 : certaines configurations la demandent en complément inverse.</li>
+    <li><span class="t">Soumettez.</span> Pour une librairie d'amplicons, précisez le taux de PhiX ci-dessous
+      sur le formulaire.</li>
+  </ol>
+  <div class="panel">
+    <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(160px,1fr))">
+      <label class="f">Concentration finale (ng/µL)<input type="number" id="finalNg" step="0.1"></label>
+      <label class="f">Volume final visé (µL)<input type="number" id="finalVol" step="5"></label>
+      <label class="f">Facteur de correction<span class="hint">propre à la plateforme</span>
+        <input type="number" id="corrFactor" step="0.05"></label>
+      <label class="f">PhiX (%)<span class="hint">librairie d'amplicons</span>
+        <input type="number" id="phix" step="1"></label>
+    </div>
+    <div id="dilOut"></div>
+  </div>
+  <div class="callout w">Le facteur de correction et le taux de PhiX sont des valeurs de plateforme.
+  Inscrivez-les ici une fois pour toutes plutôt que de les redemander à chaque soumission.</div>
+</section>
+
+<footer>
+  <p>Les valeurs saisies sur cette page sont stockées dans ce navigateur uniquement. L'échelle de la manip
+  est lue depuis la page de tri quand elle est disponible.</p>
+</footer>
+
+</div>
+<script src="libprep.js" defer></script>
+</body>
+</html>

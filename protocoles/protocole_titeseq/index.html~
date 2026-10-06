@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme-default>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Tite-Seq — feuille de paillasse</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=Roboto+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">Tite-Seq <span>· <span class="disp"></span> × <span class="lig"></span></span></div>
+  <nav class="daynav">
+    <a href="#setup">Paramètres</a>
+    <a href="#prep">Préparation</a>
+    <a href="#day1">J1 décongélation</a>
+    <a href="#day2">J2 induction</a>
+    <a href="#day3">J3 primaire</a>
+    <a href="#day4">J4 secondaire</a>
+    <a href="#sort">Tri</a>
+    <a href="#recovery">Récupération</a>
+    <a href="#day5">J5 congélation</a>
+    <a href="#counts" class="plating">Colonies</a>
+    <a href="#math">Calculs</a>
+    <a href="libprep.html">Librairie →</a>
+  </nav>
+  <button class="iconbtn" id="themeBtn" type="button">Sombre</button>
+  <button class="iconbtn" id="printBtn" type="button">Imprimer</button>
+  <button class="iconbtn" id="resetBtn" type="button">Réinitialiser</button>
+</header>
+
+<div class="wrap">
+
+<div class="hero">
+  <h1>Tite-Seq, protocole</h1>
+
+  <p class="sub"> Protocole "générique" pour Tite-Seq. En simplifiant, l'idée est de trier des cellules exposées à différentes concentrations d'un ligand donné pour mesurer leur affinité (K<sub>D</sub>). Ce protocole couvre la partie expérimentale, qui prend environ une semaine. </p>
+
+
+
+  <h2> Calendrier et paramètres de l'expériences </h2>
+  <section id="setup">
+  <div class="panel">
+    <h3>Agenda</h3>
+    <div class="clock-head">
+      <div style="min-width:220px">
+        <label class="f" for="anchor">Début du marquage primaire
+          <span class="hint">Le point fixe. Tout le reste en découle.</span>
+          <input type="datetime-local" id="anchor">
+        </label>
+      </div>
+      <div style="width:120px">
+        <label class="f" for="indH">Induction
+          <span class="hint">heures, 16–18</span>
+          <input type="number" id="indH" min="8" max="30" step="0.5">
+        </label>
+      </div>
+      <div style="width:120px">
+        <label class="f" for="primH">Primaire
+          <span class="hint">heures sur l'agitateur</span>
+          <input type="number" id="primH" min="1" max="30" step="0.5">
+        </label>
+      </div>
+      <div style="width:120px">
+        <label class="f" for="statH">Stationnaire
+          <span class="hint">décongélation → redilution, ≤22 h</span>
+          <input type="number" id="statH" min="6" max="30" step="1">
+        </label>
+      </div>
+    </div>
+    <div class="timeline" id="timeline"></div>
+  </div>
+
+  <details class="box" id="setupBox">
+    <summary>Paramètres</summary>
+    <div class="inner">
+
+      <div class="panel plating-switch">
+    <label class="checkrow" style="border:none;padding:0">
+      <input type="checkbox" id="doPlating">
+      <span class="nm"><b> Contrôles sur plaques ? </b>
+         </label>
+  </div>
+
+
+      <div class="panel">
+        <h3>Ligand et nommage</h3>
+        <div class="grid">
+          <label class="f">Nom du ligand<span class="hint">utilisé dans toute la page</span>
+            <input type="text" id="ligName"></label>
+          <label class="f">Protéine exposée<span class="hint">ce que la banque présente</span>
+            <input type="text" id="dispName"></label>
+          <label class="f">Nom de la banque<span class="hint">préfixe des noms d'échantillons</span>
+            <input type="text" id="libName"></label>
+          <label class="f">Masse molaire (kDa)<span class="hint">monomère, ou l'espèce ajoutée</span>
+            <input type="number" id="mw" step="0.1" min="0.1"></label>
+          <label class="f">Stock quantifié en
+            <select id="stockMode">
+              <option value="molar">molarité (µM)</option>
+              <option value="mass">concentration massique (mg/mL)</option>
+            </select></label>
+          <label class="f" for="stockVal"><span id="stockValLabel">Concentration du stock (µM)</span>
+            <span class="hint">à doser au nanodrop</span>
+            <input type="number" id="stockVal" step="0.01" min="0.0001"></label>
+          <label class="f">Stock disponible (µL)<span class="hint">ce qu'il reste dans le tube</span>
+            <input type="number" id="stockHave" step="5" min="0"></label>
+        </div>
+        <div id="stockDerived"></div>
+      </div>
+
+      <div class="panel">
+        <h3>Levure et banque</h3>
+        <div class="grid">
+          <label class="f">Cellules par mL à DO 1<span class="hint">levure, ~1e7</span>
+            <input type="number" id="cellsPerOD" step="1e6"></label>
+          <label class="f">Récepteurs par cellule<span class="hint">copies exposées</span>
+            <input type="number" id="recPerCell" step="1000"></label>
+          <label class="f">Diversité de la banque<span class="hint">variants</span>
+            <input type="number" id="diversity" step="1000"></label>
+          <label class="f">Cellules par échantillon (µL)<span class="hint">à DO 1</span>
+            <input type="number" id="cellVol" step="50"></label>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h3>Gamme de concentrations</h3>
+        <div class="grid">
+          <label class="f">−log[<span class="lig"></span>] le plus élevé
+            <input type="number" id="logStart" step="0.5"></label>
+          <label class="f">−log[<span class="lig"></span>] le plus bas
+            <input type="number" id="logEnd" step="0.5"></label>
+          <label class="f">Pas (décades)
+            <input type="number" id="logStep" step="0.25" min="0.25"></label>
+          <label class="f">Plus grand récipient (µL)<span class="hint">conique 500 mL = 500000</span>
+            <input type="number" id="maxVessel" step="50000"></label>
+          <label class="f">Tubes sans ligand (µL)<span class="hint">PBSA-BL seul, par tube</span>
+            <input type="number" id="zeroVol" step="50"></label>
+          <label class="f">Marge pour l'ajout direct (µL)<span class="hint">en dessous, on culotte</span>
+            <input type="number" id="minHeadroom" step="10"></label>
+          <label class="f">−log K<sub>D</sub> du pire cas<span class="hint">le plus fort liant supposé</span>
+            <input type="number" id="worstLogKd" step="0.5"></label>
+          <label class="f">Déplétion max. (%)<span class="hint">signale les lignes au-dessus</span>
+            <input type="number" id="maxDepl" step="1" min="1" max="50"></label>
+          <label class="f">Plus petit volume pipeté (µL)<span class="hint">en dessous, on dilue</span>
+            <input type="number" id="minPip" step="0.1" min="0.1"></label>
+        </div>
+        <div class="btnrow">
+          <button class="act" id="autoVol" type="button">Calculer les volumes de marquage</button>
+          <button class="act ghost" id="restoreVol" type="button">Rétablir les volumes de référence</button>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h3>Contrôles clonaux <span class="tag" id="nCtrl"></span></h3>
+        <p style="margin:0 0 10px;color:var(--ink-2);font-size:13.5px">Des souches isogéniques de
+        K<sub>D</sub> connu, marquées à part et dans leurs propres solutions. Le jour du tri, elles disent
+        si la titration a marché avant d'engager la journée ; après séquençage, leurs courbes servent de
+        référence. Leurs réactions apparaissent en bas du plan de titration.</p>
+        <div class="grid">
+          <label class="f">Souches<span class="hint">séparées par des virgules</span>
+            <input type="text" id="cloneNames"></label>
+          <label class="f">Cellules par réaction (µL)<span class="hint">à DO 1</span>
+            <input type="number" id="cellVolCtl" step="10"></label>
+          <label class="f">Événements par souche
+            <input type="number" id="ctlEvents" step="5000"></label>
+        </div>
+        <div style="margin-top:14px">
+          <div class="f" style="margin-bottom:6px">Concentrations marquées<span class="hint">cliquez pour
+          ajouter ou retirer</span></div>
+          <div class="chips" id="cloneConcPicker"></div>
+        </div>
+        <div id="ctrlNotes"></div>
+      </div>
+
+      <div class="panel">
+        <h3>Tri et récupération</h3>
+        <div class="grid">
+          <label class="f">Cellules triées par échantillon<span class="hint">déchets compris</span>
+            <input type="number" id="sortTarget" step="1e5"></label>
+          <label class="f">Bins PE par échantillon
+            <input type="number" id="nPEbins" step="1" min="2" max="8"></label>
+          <label class="f">Pertes au marquage (%)
+            <input type="number" id="lossLabel" step="5" min="0" max="95"></label>
+          <label class="f">Fraction aux déchets (%)
+            <input type="number" id="lossWaste" step="5" min="0" max="95"></label>
+          <label class="f">Pertes à la récupération (%)
+            <input type="number" id="lossRecov" step="5" min="0" max="95"></label>
+          <label class="f">Volume de croissance (mL)<span class="hint">après le tri</span>
+            <input type="number" id="outVol" step="0.5"></label>
+        </div>
+        <div id="budget"></div>
+      </div>
+
+      <div class="panel">
+        <h3>Marquage secondaire</h3>
+        <div class="grid">
+          <label class="f">Volume par réaction (µL)<input type="number" id="secVol" step="50"></label>
+          <label class="f">Excédent (%)<input type="number" id="secOver" step="5"></label>
+          <label class="f">Dilution strep-PE 1:<input type="number" id="dilPE" step="10"></label>
+          <label class="f">Dilution myc-FITC 1:<input type="number" id="dilMyc" step="10"></label>
+          <label class="f">Dilution FITC 1:<input type="number" id="dilFITC" step="10"></label>
+        </div>
+      </div>
+
+      <div class="panel plating">
+        <h3>Étalements</h3>
+        <div class="grid">
+          <label class="f">Colonies visées par boîte<span class="hint">pré-tri</span>
+            <input type="number" id="targetCol" step="50"></label>
+          <label class="f">Échantillons à étaler<span class="hint">valeurs −log, séparées par des virgules</span>
+            <input type="text" id="plateSamples"></label>
+          <label class="f">Colonies visées par boîte<span class="hint">post-tri</span>
+            <input type="number" id="targetCol2" step="50"></label>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h3>Plan de titration</h3>
+        <p style="margin:0 0 10px;color:var(--ink-2);font-size:13.5px">Une ligne par réaction, la banque
+        d'abord, les contrôles clonaux ensuite. La déplétion est la fraction de ligand capturée par la
+        protéine exposée au K<sub>D</sub> du pire cas.</p>
+        <div class="tscroll"><table id="curveTable"></table></div>
+        <div id="curveNotes"></div>
+      </div>
+
+    </div>
+  </details>
+</section>
+
+<section id="prep">
+  <div class="sechead"><h2>Préparation</h2><span class="tag">jour 1, à tout moment</span></div>
+  <p class="lede">Quantités calculées à partir des paramètres.</p>
+  <div class="twocol">
+    <div class="panel"><h3>Consommables</h3><div id="prepWare"></div></div>
+    <div class="panel"><h3>Réactifs et anticorps</h3><div id="prepReag"></div></div>
+  </div>
+  <div class="twocol">
+    <div class="panel"><h3 id="mediaTitle">Milieux et boîtes</h3><div id="prepMedia"></div></div>
+    <!-- <div class="panel"><h3>À préparer à J2 et à garder au froid</h3> -->
+    <!--   <div id="prepMake"></div> -->
+    <!-- </div> -->
+    <div class="panel">
+    <h3>Étiquetage des tubes</h3>
+    <p style="margin:0 0 8px;color:var(--ink-2);font-size:14px">Un tube de 1,5 mL par échantillon pour
+    les cellules, un récipient par solution primaire, et les tubes de collecte du tri.</p>
+    <div id="tubeCount"></div>
+  </div>
+  </div>
+  
+</section>
+
+<section id="day1">
+  <div class="sechead"><h2>Jour 1, décongélation</h2><span class="tag" id="t-day1"></span></div>
+  <ol class="steps">
+    <li><span class="t">Décongelez le cryotube de la banque sur la paillasse.</span></li>
+    <li><span class="t">Homogénéisez bien au P1000</span> et diluez <span class="num" id="thawVol">150µL</span>
+      dans 5 mL de SDCAA-BL.</li>
+    <li><span class="t">Pareil pour les cultures clonales</span> <span id="cloneList2" class="muted"></span>, 150 μL dans 
+      5 mL de SDCAA-BL chacune.</li>
+    <li><span class="t">Roue à 30 °C pour la nuit.</span></li>
+  </ol>
+  <div id="divThaw"></div>
+</section>
+
+<section id="day2">
+  <div class="sechead"><h2>Jour 2, induction</h2><span class="tag" id="t-day2"></span></div>
+  <ol class="steps">
+    <li><span class="t">Mesurez l'OD cultures saturées à 1:10 (100μL de solution + 900μL de SDCAA) </span> et rediluez chaque souche à DO 0,67 dans 10 mL de SGDCAA-BL pour la librairie et 5 mL de SGDCAA-BL pour les clones. Voir en dessous pour faire la dilution, en général il faudra rajouter entre 300 à 1500 µL de culture saturée.</li>
+  </ol>
+  <div class="panel">
+    <h3>Redilution</h3>
+    <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(150px,1fr))">
+      <label class="f">DO saturée mesurée (multiplier par 10 la valeur donnée par le photomètre)
+        <input type="number" id="satOD" step="0.1"></label>
+      <label class="f">DO visée <br/><br/>
+        <input type="number" id="indOD" step="0.01"></label>
+      <label class="f">Volume de culture (mL) <br/><br/>
+        <input type="number" id="indVol" step="0.5"></label>
+    </div>
+    <div id="backdil" style="margin-top:12px"></div>
+  </div>
+</section>
+
+<section id="day3">
+  <div class="sechead"><h2>Jour 3 — marquage primaire</h2><span class="tag" id="t-day3"></span></div>
+  <p class="lede"><span class="num" id="indH3">16</span> à 18 h après l'induction. Solutions primaires
+  préparées et tubes étiquetés le matin, avant de sortir les cellules.</p>
+
+  <div class="panel">
+    <h3>1 · Cellules à culotter</h3>
+    <ol class="steps tight">
+      <li><span class="t">Sortir les cultures de la roue</span> et vortexer doucement.</li>
+      <li><span class="t">Diluer 100 µL de culture dans 900 µL de SGDCAA</span> et lire la DO. On s'attend à 0,25–0,35 </li>
+      <li><span class="t">Culotter le volume indiqué.</span> 14 000 g pendant 1 min pour les tubes de
+        1,5 mL, 3 000 g pendant 5 min pour les tubes de 15 mL.</li>
+      <li><span class="t">Laver une fois</span> avec un volume équivalent de PBSA-BL froid et culotter à nouveau.</li>
+      <li><span class="t">Reprendre dans le volume fixé</span> et bien homogénéiser. La suspension est à DO 1, c'est elle qu'on répartit entre les tubes d'échantillons.</li>
+    </ol>
+    <div id="cellPrep"></div>
+    <div id="cellPrepNote"></div>
+  </div>
+
+  <div class="panel">
+    <h3>2 · Solutions primaires</h3>
+    
+    <p style="margin:0 0 10px;color:var(--ink-2);font-size:14px">Ici on prépare les solutions de ligand
+    auxquelles on ajoutera les cellules. Tout reste sur glace. Préparer d'abord les dilutions en série du
+    ligand (1:10, 1:100) ; les volumes ci-dessous en tiennent compte.</p>
+    <p style="margin:0 0 10px;color:var(--ink-2);font-size:14px">Quand le volume de marquage le permet, la
+    solution est préparée amputée du volume de cellules : la colonne PBSA-BL est déjà réduite d'autant et
+    la suspension à DO 1 se verse directement dedans. Sinon la solution est préparée au volume complet et
+    les cellules y sont transférées par culot.</p>
+        <div id="primeNotes"></div>
+    <div class="tscroll"><table id="primeTable"></table></div>
+  </div>
+
+  <ol class="steps">
+    <li class="plating"><span class="t">Sortez les boîtes 2× SDCAA et 2× YPD-Amp</span> pour qu'elles se réchauffent.</li>
+    <li><span class="t">Prépare les cellules</span> comme décrit au point 1 ci-dessus, jusqu'à la
+      reprise à DO 1 <span id="resusLine" class="muted"></span>.</li>
+    <li><span class="t">Répartis le volume de cellules de chaque échantillon</span> dans son tube de
+      1,5 mL étiqueté. Garde tout dans la glace.</li>
+    <li><span class="t">Ajout direct, quand la colonne Méthode l'indique.</span> La solution a été
+      préparée amputée du volume de cellules : on verse la suspension à DO 1 dedans, le volume final et la
+      concentration de ligand tombent justes. Pas de centrifugation, pas de culot à reprendre.</li>
+    <li><span class="t">Par culot, pour les réactions trop petites.</span> Quand le volume de marquage ne
+      laisse pas la place aux cellules, culotter le tube d'échantillon à vitesse maximale pendant 1 min,
+      retirer le PBSA à la pipette, puis reprendre le culot dans la solution primaire : un peu de primaire
+      dans le tube de cellules, homogénéiser, remettre le tout, rincer avec un peu de primaire et remettre
+      ce rinçage.</li>
+    <li><span class="t">Homogénéiser.</span> Au P1000 pour les petits tubes, par retournements lents et
+      complets pour les coniques.
+      <ul><li>Les échantillons sans primaire sont repris dans 500 µL de PBSA-BL.</li></ul></li>
+    <li class="plating"><span class="t">Étalez les contrôles pré-tri</span> (voir ci-dessous) avant de
+      mettre les tubes sur l'agitateur.</li>
+    <li><span class="t">Fermez chaque tube, parafilmez, agitez à température ambiante</span> pendant
+      <span class="num" id="primH2">16</span> h.</li>
+  </ol>
+
+  <div class="panel plating">
+    <h3>3 · Étalement pré-tri</h3>
+    <p style="margin:0 0 10px;color:var(--ink-2);font-size:14px">La densité cellulaire varie énormément
+    d'une concentration à l'autre, puisque les volumes de marquage varient. Voici les volumes qui donnent
+    le nombre de colonies visé pour chaque échantillon, directement depuis la réaction de marquage.</p>
+    <div class="tscroll"><table id="preplate"></table></div>
+    <p style="margin:10px 0 0;color:var(--ink-2);font-size:13.5px">50 µL d'eau stérile sur la boîte,
+    puis les cellules, étalement au râteau, séchage sur la paillasse, 48 h à 30 °C. Chaque échantillon
+    sur SDCAA et sur YPD-Amp.</p>
+  </div>
+</section>
+
+<section id="day4">
+  <div class="sechead"><h2>Jour 4 — marquage secondaire</h2><span class="tag" id="t-day4"></span></div>
+  <p class="lede">À partir d'ici, travail à l'abri de la lumière : papier alu sur la boîte, couvercles
+  fermés.</p>
+
+  <ol class="steps">
+    <li><span class="t">Rassemblez les gros échantillons dans des tubes de 1,5 mL.</span> Centrifugez les
+      récipients de 15 mL, 50 mL et 500 mL à 3 500 tr/min pendant 10 min (adaptateurs <em>et</em>
+      manchons pour les coniques de 500 mL). Servez-vous du liquide résiduel pour faire descendre le
+      culot jusqu'à un tube de 1,5 mL, en centrifugeant 1 min à vitesse maximale entre les transferts.
+      <ul><li>Ne jetez aucun tube tant que le culot n'est pas visible dans le tube final.</li>
+      <li>Un échantillon à la fois.</li></ul></li>
+    <li><span class="t">Lavez deux fois</span> avec 1 mL de PBSA-BL, en retirant le surnageant à la
+      pipette à chaque fois.</li>
+    <li><span class="t">Ajoutez 250 µL de secondaire</span> à chaque échantillon, ou du PBSA-BL pour les
+      non marqués. Reprenez, fermez, et agitez à 4 °C dans le noir pendant 45 min.</li>
+    <li><span class="t">Pendant l'incubation, préparez les tubes de collecte.</span> Polypropylène 5 mL,
+      trait à 1 mL, remplis de 5 mL de 2× SDCAA + 1 % BSA, dans la glace.</li>
+    <li><span class="t">Lavez encore deux fois</span> avec 1 mL de PBSA-BL après l'incubation.<span
+      class="plating"> Avant la dernière centrifugation, étalez les contrôles post-secondaire.</span></li>
+    <li><span class="t">Dernière centrifugation.</span> Laissez environ 10 µL de surnageant. Dans la
+      glace, à l'abri de la lumière.</li>
+  </ol>
+
+  <div class="panel">
+    <h3>Solutions secondaires</h3>
+    <div class="tscroll"><table id="secTable"></table></div>
+  </div>
+</section>
+
+<section id="samples">
+  <div class="sechead"><h2>Liste des échantillons</h2><span class="tag" id="nSamples"></span></div>
+  <p class="lede">Liste à recopier sur les tubes, dans l'ordre de passage sur l'appareil.</p>
+  <div class="btnrow">
+    <button class="act ghost" id="copySamples" type="button">Copier en TSV</button>
+    <button class="act ghost" id="reshuffle" type="button">Retirer l'ordre au sort</button>
+    <span class="chip" id="seedLabel"></span>
+  </div>
+  <div class="tscroll"><table id="sampleTable"></table></div>
+</section>
+
+<section id="sort">
+  <div class="sechead"><h2>Tri</h2><span class="tag" id="t-sort"></span></div>
+  <ol class="steps">
+    <li><span class="t">Préparez l'appareil</span> selon le SOP de l'Aria, puis reprenez chaque
+      échantillon dans 500 µL de PBSA-BL juste avant de le passer, à travers un tube filtre.
+      <ul><li>Rester sous 2×10⁷ cellules/mL ; diluer davantage si le débit s'emballe.</li>
+      <li>Vortex doux avant chaque échantillon, le reste dans la glace et à l'abri de la lumière.</li></ul></li>
+    <li><span class="t">Compensation.</span> Passez l'échantillon non marqué (aucun fluorophore),
+      l'échantillon myc-FITC (FITC seul) et l'échantillon ligand-PE (PE seul).</li>
+    <li><span class="t">Fenêtre FSC/SSC</span> sur la banque non marquée, puis tracez FSC-H contre FSC-A
+      et excluez les doublets.</li>
+    <li><span class="t">Tracez la fenêtre d'expression.</span> Comparez le contrôle FITC seul à
+      l'échantillon myc-FITC et nommez la fenêtre myc-FITC⁺ ; elle élimine les non-exprimants.</li>
+    <li><span class="t">Tracez les fenêtres PE.</span> Passez l'échantillon sans ligand pour placer la
+      limite PE⁺ sur la population FITC⁺.
+      <ul><li><span class="chip b1">PE1</span> est FITC⁺/PE⁻ et ne change jamais d'un échantillon à
+      l'autre.</li>
+      <li><span class="chip b2">PE2</span> <span class="chip b3">PE3</span> <span class="chip b4">PE4</span>
+      découpent la population PE⁺ en tiers égaux, à retracer pour chaque échantillon.</li></ul></li>
+    <li><span class="t">Passez les contrôles isogéniques</span> à 30 000 événements chacun, avant les
+      tris de liaison.</li>
+    <li><span class="t">Tri d'expression.</span> Tracez le myc-FITC biexponentiel sur tous les événements,
+      découpez huit bins égaux FITC1–FITC8, et triez jusqu'à <span class="num" id="fitcTarget"></span> au
+      total dans les bins pairs, puis autant dans les bins impairs.</li>
+    <li><span class="t">Tris de liaison.</span> Pour chaque concentration, retracez PE2–PE4 sur les
+      événements FITC⁺ et triez jusqu'à <span class="num" id="peTarget"></span> au total, déchets compris.
+      <ul><li>Suivre l'ordre de la liste des échantillons, tiré au sort pour décorréler la dérive au
+      cours de la journée de la concentration.</li>
+      <li>Les basses concentrations peuvent demander un deuxième tube de collecte.</li></ul></li>
+    <li><span class="t">Enregistrez, pour chaque échantillon :</span> le PDF d'analyse par lot avec les
+      fenêtres, les fichiers FCS de l'échantillon entier et de chaque fenêtre, et le rapport de tri.</li>
+    <li><span class="t">Récupérez les tubes.</span> Rincez les parois à la pipette dans le milieu, retour
+      dans la glace — le noir n'a plus d'importance une fois les cellules collectées.</li>
+    <li><span class="t">Rinçage entre les échantillons.</span> Cytometer → cleaning modes → sample line
+      backflush.</li>
+    <li><span class="t">À la fin,</span> exportez les FCS et l'analyse par lot de toute la manip et
+      nettoyez l'appareil.</li>
+  </ol>
+  <div class="panel"><h3>Journal de tri</h3>
+    <p style="margin:0 0 10px;color:var(--ink-2);font-size:14px">Comptages réels saisis au fur et à
+    mesure ; les volumes de la section suivante en découlent.</p>
+    <div class="tscroll"><table id="sortLog"></table></div>
+  </div>
+</section>
+
+<section id="recovery">
+  <div class="sechead"><h2 id="recovTitle">Récupération et étalement</h2><span class="tag" id="t-recov"></span></div>
+  <ol class="steps">
+    <li><span class="t">Préparez.</span> Boîtes sur la paillasse, centrifugeuse de paillasse refroidie,
+      <span class="num" id="nCulture"></span> tubes à culture étiquetés par fenêtre.
+      <ul><li>Code couleur du scotch par fenêtre : <span class="chip b1">PE1 rouge</span>
+      <span class="chip b2">PE2 orange</span> <span class="chip b3">PE3 vert</span>
+      <span class="chip b4">PE4 bleu</span>, <span class="chip fitc">FITC jaune</span>, non trié
+      blanc.</li></ul></li>
+    <li class="plating"><span class="t">Étalez les contrôles post-tri</span> du tableau ci-dessous, sur
+      SDCAA et sur YPD-Amp, 48 h à 30 °C.</li>
+    <li><span class="t">Centrifugez les tubes FACS</span> 10 min à 3 000 tr/min avec les adaptateurs
+      bleus, par lots pour que les culots tiennent encore quand vous aspirez.
+      <ul><li>Culot non visible : prolonger la centrifugation, puis poursuivre.</li></ul></li>
+    <li><span class="t">Retirez soigneusement le milieu de collecte</span> à la pipette.</li>
+    <li><span class="t">Reprenez dans la moitié du volume de croissance</span>
+      (<span class="num" id="halfOut"></span>), transférez dans le tube à culture, puis rincez les parois
+      du tube avec l'autre moitié et versez ce rinçage dans le même tube à culture.</li>
+    <li><span class="t">Reportez l'échantillon non trié</span> à nombre de cellules équivalent :
+      <span class="num" id="unsortedVol"></span> directement dans du SDCAA-BL, sans centrifugation.</li>
+    <li><span class="t">Roue à 30 °C.</span> La plupart des tubes saturent pendant la nuit.</li>
+  </ol>
+  <div class="panel plating">
+    <h3>Étalement post-tri</h3>
+    <div class="tscroll"><table id="postplate"></table></div>
+  </div>
+</section>
+
+<section id="day5">
+  <div class="sechead"><h2>Jour 5 — congélation</h2><span class="tag" id="t-day5"></span></div>
+  <p class="lede">Congélation à DO 0,9–2, de la fin de phase exponentielle au tout début de saturation.
+  Les tubes y arrivent par vagues : vérifier toutes les deux heures à partir du matin.</p>
+  <ol class="steps">
+    <li><span class="t">Étiquetez deux tubes de 1,5 mL et un cryotube par échantillon</span>
+      (<span class="num" id="nFreeze"></span> de chaque). Mettez 70 µL de glycérol à 40 % dans chaque
+      cryotube.</li>
+    <li><span class="t">Culots pour la miniprep.</span> 1,5 mL de culture dans chaque tube de 1,5 mL,
+      30 s à vitesse maximale, puis −20 °C dans une boîte étiquetée.</li>
+    <li><span class="t">Stocks glycérol.</span> 0,5 mL de culture dans chaque cryotube, homogénéisez
+      doucement à la pipette, −80 °C.</li>
+  </ol>
+  <div class="panel"><h3>Journal de DO</h3>
+    <p style="margin:0 0 10px;color:var(--ink-2);font-size:14px">Les valeurs hors de 0,9–2,0 sont
+    signalées.</p>
+    <div class="tscroll"><table id="odLog"></table></div>
+  </div>
+</section>
+
+<section id="counts" class="plating">
+  <div class="sechead"><h2>Comptage des colonies</h2><span class="tag">jours 5 et 6</span></div>
+  <p class="lede">Le YPD-Amp compte toutes les cellules viables, le SDCAA seulement celles qui portent
+  encore le plasmide. L'écart entre les deux est la perte de plasmide.</p>
+  <div class="tscroll"><table id="countTable"></table></div>
+  <div class="btnrow"><button class="act ghost" id="addCount" type="button">Ajouter une ligne</button></div>
+</section>
+
+<section id="math">
+  <div class="sechead"><h2>Comment les nombres sont calculés</h2><span class="tag">hypothèses, explicites</span></div>
+  <div class="twocol">
+    <div>
+      <h3 style="font-size:15px;margin-bottom:6px">Concentration en protéine exposée</h3>
+      <p style="color:var(--ink-2);font-size:14px">Cellules dans la réaction × récepteurs par cellule,
+      divisé par le nombre d'Avogadro et le volume de marquage.</p>
+      <div class="formula">[exposée] = V_cellules(mL) · cellules_par_mL · récepteurs_par_cellule / (N_A · V_marquage(L))</div>
+
+      <h3 style="font-size:15px;margin:16px 0 6px">Déplétion du ligand</h3>
+      <p style="color:var(--ink-2);font-size:14px">La résolution de l'équation quadratique de liaison 1:1
+      pour le complexe, avec le K<sub>D</sub> du pire cas, donne la fraction de ligand qui serait capturée.
+      C'est en la gardant faible que vous pouvez traiter la concentration nominale comme la concentration
+      libre dans l'ajustement.</p>
+      <div class="formula">C = ½[(A+R+K_D) − √((A+R+K_D)² − 4AR)]
+déplétion = C / A          ligand libre = A − C</div>
+      <p style="color:var(--ink-2);font-size:14px">C'est pour cela que les réactions à basse concentration
+      tournent dans des coniques de 500 mL. À 10<sup>−12</sup> M, il n'y a tout simplement pas assez de
+      ligand dans un petit volume pour tout le monde.</p>
+    </div>
+    <div>
+      <h3 style="font-size:15px;margin-bottom:6px">Volume de cellules à culotter</h3>
+      <div class="formula">V = V_reprise · DO_visée / (10 · DO_1:10)</div>
+
+      <h3 style="font-size:15px;margin:16px 0 6px">Cascade de pipetage</h3>
+      <p style="color:var(--ink-2);font-size:14px">Le volume de stock nécessaire vaut <span class="num">V_total ·
+      [ligand] / [stock]</span>. S'il passe sous votre volume minimal pipetable, la même quantité de matière
+      est délivrée depuis une dilution au 1:10, puis au 1:100.</p>
+
+      <h3 style="font-size:15px;margin:16px 0 6px">Concentration du stock</h3>
+      <p style="color:var(--ink-2);font-size:14px">Un stock donné en masse est converti avec la masse
+      molaire que vous avez saisie. La masse de ligand consommée par la manip est affichée à côté du
+      volume, puisque c'est sur elle que se font les commandes.</p>
+      <div class="formula">C(µM) = 1000 · c(mg/mL) / M(kDa)
+masse(µg) = V(µL) · C(µM) · M(kDa) / 1000</div>
+
+      <h3 style="font-size:15px;margin:16px 0 6px">Bilan cellulaire</h3>
+      <div class="formula">marquées → triées → récupérées
+× (1−pertes_marquage) × (1−déchets) × (1−pertes_récupération)</div>
+      <p style="color:var(--ink-2);font-size:14px">Le nombre qui compte, c'est les cellules récupérées
+      divisées par la diversité de la banque. En dessous d'environ 10×, le bruit d'échantillonnage domine
+      les estimations de K<sub>D</sub> aux extrémités de la courbe.</p>
+
+      <details>
+        <summary>Constantes utilisées</summary>
+        <div class="formula">N_A = 6,022e23
+DO 1 = <span id="c-cells"></span> cellules/mL
+récepteurs/cellule = <span id="c-rec"></span></div>
+      </details>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <p>Les valeurs saisies sur cette page sont stockées dans ce navigateur uniquement.</p>
+  <p class="noprint">Les nombres sont recalculés à partir de vos saisies, pas recopiés. Si l'un d'eux ne
+  colle pas avec la feuille Benchling, vérifiez d'abord la concentration du stock et la DO.</p>
+</footer>
+
+</div>
+<script src="app.js" defer></script>
+</body>
+</html>
