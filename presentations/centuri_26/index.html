@@ -1,0 +1,1581 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Naive Binding Affinity</title>
+<link rel="stylesheet" href="lib/fonts.css">
+<link rel="stylesheet" href="lib/reveal.css">
+<!--
+  ==========================================================================
+  LAYOUTS
+  Every slide is a <section> holding one 1280x720 <div class="stage">. The
+  stage's layout class decides where the content goes. Shared by all layouts:
+    <h2 class="title">        claim title, top left, after the colour rail
+    <footer class="cite-slot"> references, small grey, bottom right
+
+  layout-figure   one figure      [.lead] <figure> [.caption]
+  layout-two      two figures     [.lead] <figure> <figure> [.caption]
+  layout-split    figure + text   <figure> <div class="side">
+                                  add "reverse" for text on the left;
+                                  style="--fig:1.5fr" sets the figure's share
+  layout-panels   rows of panels  <div class="rows"><div class="row">
+                                  <div class="panel fig|stack|beside|text">
+  layout-text     text only       <div class="body">
+  layout-statement big number     <p class="big">2%</p> <p>…</p>
+  layout-section  divider        .kicker + <h2 class=title> + .rule [+ .sub]
+  layout-cover    title slide
+  layout-canvas   free placement  <div class="canvas"> of absolutely placed
+                                  .sh shapes (kept for diagrams built click
+                                  by click, where pieces overlap)
+
+  Slides still to be made carry <div class="todo">; press D to show them.
+
+  Text slots (.lead .caption .side .body .ptext) hold <div class="tx"> with
+  one <div class="block"> per original text box; "fit" shrinks the text if
+  it overflows. Any element can be a build step:
+    class="fragment fade-in" data-fragment-index="0"
+  ==========================================================================
+-->
+<style>
+  :root{
+    --ink:#1a1a1a;
+    --muted:#555;
+    --cite:#8a8a8a;
+    --paper:#ffffff;
+    --accent:#c8102e;
+
+    --title-size:40px;
+    --body-size:34px;
+    --caption-size:26px;
+    --cite-size:15px;
+
+    --top:104px;        /* content starts below the title band   */
+    --bottom:54px;      /* room for the references and page no.  */
+    --side:64px;        /* left/right margin for content         */
+    --title-left:105px; /* titles start after the colour rail    */
+    --gap:40px;
+  }
+  html,body{background:#111;margin:0}
+  .reveal{font-family:'Lato',sans-serif;color:var(--ink);font-size:24px}
+  .reveal .slides{text-align:left}
+  .reveal .slides section{padding:0!important;height:720px;width:1280px;overflow:visible}
+  .reveal .slides section.present,.reveal .slides section.past,.reveal .slides section.future{top:0!important}
+
+  /* ---------------------------------------------------------- the stage */
+  .stage{position:absolute;inset:0;width:1280px;height:720px;box-sizing:border-box;
+         background:var(--paper);overflow:hidden;box-shadow:0 10px 40px rgba(0,0,0,.45)}
+  .bg{position:absolute;inset:0;pointer-events:none}
+
+  .stage>.title{position:absolute;left:var(--title-left);right:170px;top:0;height:96px;
+         margin:0;display:flex;align-items:center;
+         font:700 var(--title-size)/1.15 'Lato',sans-serif;color:var(--ink);letter-spacing:-.005em}
+
+  .cite-slot{position:absolute;right:92px;bottom:14px;max-width:760px;text-align:right;
+         font-size:var(--cite-size);line-height:1.35;color:var(--cite)}
+  .cite-slot p{margin:0}
+  /* references left inside canvas shapes get the same treatment */
+  .reveal p.cite{font-size:var(--cite-size)!important;line-height:1.35!important;
+         color:var(--cite)!important;font-style:normal!important;font-weight:400!important}
+
+  /* ------------------------------------------------- grid layouts, shared */
+  .layout-figure,.layout-two,.layout-split,.layout-text,.layout-panels,.layout-statement,
+  .layout-cases,.layout-section{
+         padding:var(--top) var(--side) var(--bottom)}
+  .stage figure{margin:0;min-width:0;min-height:0;display:flex;align-items:center;justify-content:center}
+  .stage figure img{display:block;width:100%;height:100%;object-fit:contain}
+
+  .lead,.caption,.side,.body,.ptext{min-width:0;min-height:0}
+  .block p{margin:0;line-height:1.3}
+  .block p+p{margin-top:.35em}
+  .block+.block{margin-top:.8em}
+  .lead,.side,.body,.ptext{font-size:var(--body-size)}
+  .caption{font-size:var(--caption-size);color:var(--muted)}
+  .side,.body,.ptext{display:flex;flex-direction:column;justify-content:center}
+
+  /* one figure, optional lead text above and caption below */
+  .layout-figure{display:grid;grid-template-rows:auto minmax(0,1fr) auto;row-gap:18px}
+
+  /* two figures side by side */
+  .layout-two{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);
+         grid-template-rows:auto minmax(0,1fr) auto;gap:18px var(--gap);
+         grid-template-areas:"lead lead" "a b" "cap cap"}
+  .layout-two .lead{grid-area:lead}
+  .layout-two figure:nth-of-type(1){grid-area:a}
+  .layout-two figure:nth-of-type(2){grid-area:b}
+  .layout-two .caption{grid-area:cap}
+
+  /* figure + text column */
+  .layout-split{display:grid;grid-template-columns:minmax(0,var(--fig,1.4fr)) minmax(0,1fr);
+         grid-template-rows:minmax(0,1fr);column-gap:var(--gap)}
+  .layout-split.reverse{grid-template-columns:minmax(0,1fr) minmax(0,var(--fig,1.4fr))}
+  .layout-split.reverse figure{grid-column:2;grid-row:1}
+  .layout-split.reverse .side{grid-column:1;grid-row:1}
+
+  /* text only: aligned with the title */
+  .layout-text{display:flex;flex-direction:column;justify-content:center;
+         padding-left:var(--title-left);padding-right:160px}
+
+  /* rows of panels, sized from the original arrangement */
+  .rows{height:100%;display:flex;flex-direction:column;gap:22px}
+  .row{display:flex;gap:var(--gap);flex-basis:0;min-height:0}
+  .panel{flex-basis:0;min-width:0;min-height:0;display:flex}
+  .panel.fig>figure{flex:1}
+  .panel.stack{flex-direction:column;gap:12px}
+  .panel.stack>figure{flex:1 1 0}
+  .panel.stack>.ptext{font-size:var(--caption-size)}
+  .panel.beside>.ptext{font-size:var(--body-size)}
+  .panel.beside{display:grid;grid-template-columns:minmax(0,var(--fig,1fr)) minmax(0,1fr);
+         grid-template-rows:minmax(0,1fr);column-gap:28px;align-items:center}
+  .panel.beside.reverse{grid-template-columns:minmax(0,1fr) minmax(0,var(--fig,1fr))}
+  .panel.beside.reverse>figure{grid-column:2;grid-row:1}
+  .panel.beside.reverse>.ptext{grid-column:1;grid-row:1}
+  .panel.beside>figure{height:100%}
+  .panel.text{align-items:center}
+
+  /* a lead idea, then a row of cases that follow from it */
+  .layout-cases{display:grid;grid-template-rows:auto minmax(0,1fr);row-gap:26px}
+  .layout-cases .lead-row{display:grid;height:190px;
+         grid-template-columns:minmax(0,250px) minmax(0,1fr);
+         column-gap:var(--gap);align-items:center}
+  .layout-cases figure{min-height:0;height:100%}
+  .layout-cases .lead-row .claim{font-size:34px;line-height:1.3;max-width:760px}
+  .layout-cases .lead-row .claim em{font-style:normal;color:#c8102e}
+  .layout-cases .case-row{display:grid;min-height:0;
+         grid-template-columns:repeat(3,minmax(0,1fr));column-gap:var(--gap)}
+  .layout-cases .case{display:grid;grid-template-rows:minmax(0,1fr) auto;row-gap:10px;
+         height:100%;min-height:0}
+  .layout-cases .case p{margin:0;font-size:24px;line-height:1.3;color:var(--muted);
+         text-align:center}
+  .layout-cases .case p b{font-weight:700;color:var(--ink)}
+
+  /* a section divider: just the section's name, centred on the rail colour */
+  .layout-section{display:flex;flex-direction:column;justify-content:center;
+         padding:0 var(--side) 0 var(--title-left)}
+  .layout-section .kicker{margin:0 0 18px;font:700 17px/1 'Lato',sans-serif;
+         letter-spacing:.14em;text-transform:uppercase;color:var(--accent)}
+  .layout-section h2.title{position:static!important;left:auto;right:auto;height:auto;
+         display:block;font-size:64px;line-height:1.1;max-width:1000px;font-weight:900}
+  .layout-section .rule{margin-top:26px;width:120px;height:5px;background:var(--accent)}
+  .layout-section .sub{margin:22px 0 0;font-size:28px;color:var(--muted);max-width:820px}
+
+  /* work in progress: shown only in draft mode (press D) */
+  .todo{display:none}
+  body.draft .todo{display:flex;position:absolute;left:var(--title-left);right:160px;
+         top:var(--top);bottom:var(--bottom);align-items:center;justify-content:center;
+         border:2px dashed #e0ded9;border-radius:6px;
+         font:italic 24px/1.4 'Lato',sans-serif;color:#b9b5ad}
+  body.draft .stage::after{content:attr(data-orig);position:absolute;left:10px;bottom:8px;
+         font:700 12px/1 'Lato',sans-serif;color:#c9c5be}
+
+  /* two figures: --a sets the first column's share of the width */
+  .layout-two{grid-template-columns:minmax(0,var(--a,1fr)) minmax(0,var(--b,1fr))}
+
+  /* one big number and a line of explanation */
+  .layout-statement{display:flex;flex-direction:column;justify-content:center;
+         padding-left:var(--title-left)}
+  .layout-statement .big{margin:0;font:900 150px/1 'Lato',sans-serif;color:var(--accent)}
+  .layout-statement .big+p{margin:.25em 0 0;font-size:34px;max-width:900px;line-height:1.3}
+
+  /* title slide: banner and logos come from the master page */
+  .cover-text{position:absolute;left:var(--side);right:var(--side);top:318px;height:236px;
+         display:flex;flex-direction:column;align-items:center;justify-content:center;
+         text-align:center;gap:14px}
+  .cover-text .title{margin:0;font:400 40px/1.2 'Lato',sans-serif;color:#2a6099;max-width:1060px}
+  .cover-text .author{margin:0;font-weight:700;font-size:24px}
+  .cover-text .event{margin:0;font-style:italic;font-size:17px;color:var(--muted)}
+
+  /* free placement (canvas, master pages, cover logos) */
+  .canvas{position:absolute;inset:0}
+  .sh{position:absolute;display:flex;flex-direction:column;justify-content:flex-start;
+      box-sizing:border-box}
+  .sh>img{display:block;width:100%;height:100%;object-fit:fill}
+  .sh .tx{width:100%}
+  .sh.nowrap .tx{display:flex;flex-direction:column;align-items:center}
+  .sh.nowrap p{white-space:nowrap}
+  .sh p{margin:0;line-height:1.2;font-size:inherit}
+  .sh .tx>p:first-child{margin-top:0!important}
+  .fx{position:absolute;inset:0;pointer-events:none}
+  .fx>.sh{pointer-events:auto}
+
+  /* ------------------------------------------------------------- shared */
+  .b{display:inline-block;vertical-align:middle}
+  .s{white-space:pre}
+  .stage a{color:#1d5fa8;text-decoration:none;border-bottom:1px solid rgba(29,95,168,.35)}
+  .badge{position:absolute;right:14px;bottom:12px;z-index:50;
+         font:700 13px/1 'Lato',sans-serif;letter-spacing:.04em;text-transform:uppercase;
+         color:#8a8a8a;background:rgba(255,255,255,.9);padding:6px 10px;border-radius:3px;
+         border:1px solid #e3e3e3}
+
+  .reveal .progress{height:3px;color:var(--accent)}
+
+  @media print{
+    html,body{background:#fff}
+    .stage{box-shadow:none}
+  }
+</style>
+</head>
+<body>
+
+<!-- ======================================================================
+     MASTER PAGES
+     The decoration shared by every slide of a given master (colour rail,
+     logo, page number), and each master's rail colour as --accent. Slides
+     name their master in data-master; the script copies it in.
+     ====================================================================== -->
+<style>
+  section[data-master="blueslide"] { --accent: #0094d8; }
+  section[data-master="greenslide"] { --accent: #88ba14; }
+  section[data-master="redslide"] { --accent: #e2007a; }
+  section[data-master="yellow_5f_ciml"] { --accent: #f08a00; }
+</style>
+
+<template data-master="blueslide">
+  <div class="sh" style="left:1120.63px; top:13.03px; width:131.10px; height:75.59px; justify-content:flex-start"><img src="v2/p000.webp" alt=""></div>
+  <div class="sh" style="left:0.00px; top:41.43px; width:94.43px; height:11.30px; background:#0094d8; padding-top:5.72px; padding-bottom:5.72px; padding-left:11.43px; padding-right:11.43px; justify-content:center"></div>
+  <div class="sh" style="left:1212.60px; top:720.19px; width:41.57px; height:11.30px; transform:rotate(-90.000deg); transform-origin:0 0; background:#0094d8; padding-top:5.72px; padding-bottom:5.72px; padding-left:11.43px; padding-right:11.43px; justify-content:center"></div>
+  <div class="sh" style="left:1222.15px; top:675.28px; width:153.10px; height:44.86px; padding-top:5.72px; padding-bottom:5.72px; padding-left:11.43px; padding-right:11.43px">
+    <div class="tx">
+      <p style="line-height:1.200; font-size:29.04px"><span style="font-size:24.04px"><span class=pn></span></span></p>
+    </div>
+  </div>
+</template>
+
+<template data-master="greenslide">
+  <div class="sh" style="left:1120.63px; top:13.03px; width:131.10px; height:75.59px; justify-content:flex-start"><img src="v2/p000.webp" alt=""></div>
+  <div class="sh" style="left:0.00px; top:41.75px; width:94.43px; height:11.30px; background:#88ba14; padding-top:5.72px; padding-bottom:5.72px; padding-left:11.43px; padding-right:11.43px; justify-content:center"></div>
+  <div class="sh" style="left:1212.23px; top:720.19px; width:41.57px; height:11.30px; transform:rotate(-90.000deg); transform-origin:0 0; background:#88ba14; padding-top:5.72px; padding-bottom:5.72px; padding-left:11.43px; padding-right:11.43px; justify-content:center"></div>
+  <div class="sh" style="left:1222.15px; top:675.28px; width:153.10px; height:44.86px; padding-top:5.72px; padding-bottom:5.72px; padding-left:11.43px; padding-right:11.43px">
+    <div class="tx">
+      <p style="line-height:1.200; font-size:29.04px"><span style="font-size:24.04px"><span class=pn></span></span></p>
+    </div>
+  </div>
+</template>
+
+<template data-master="redslide">
+  <div class="sh" style="left:1120.63px; top:13.03px; width:131.10px; height:75.59px; justify-content:flex-start"><img src="v2/p000.webp" alt=""></div>
+  <div class="sh" style="left:0.00px; top:40.61px; width:94.43px; height:11.30px; background:#e2007a; padding-top:5.72px; padding-bottom:5.72px; padding-left:11.43px; padding-right:11.43px; justify-content:center"></div>
+  <div class="sh" style="left:1212.73px; top:720.23px; width:41.57px; height:11.30px; transform:rotate(-90.000deg); transform-origin:0 0; background:#e2007a; padding-top:5.72px; padding-bottom:5.72px; padding-left:11.43px; padding-right:11.43px; justify-content:center"></div>
+  <div class="sh" style="left:1222.15px; top:675.28px; width:153.10px; height:44.86px; padding-top:5.72px; padding-bottom:5.72px; padding-left:11.43px; padding-right:11.43px">
+    <div class="tx">
+      <p style="line-height:1.200; font-size:29.04px"><span style="font-size:24.04px"><span class=pn></span></span></p>
+    </div>
+  </div>
+</template>
+
+<template data-master="titlepage">
+  <div class="sh" style="left:82.86px; top:608.24px; width:156.26px; height:94.48px; justify-content:flex-start"><img src="v2/p000.webp" alt=""></div>
+  <div class="sh" style="left:406.44px; top:587.07px; width:113.32px; height:113.36px; justify-content:flex-start"><img src="v2/p001.webp" alt=""></div>
+  <div class="sh" style="left:1028.90px; top:609.02px; width:168.97px; height:73.21px; justify-content:flex-start"><img src="v2/p002.webp" alt=""></div>
+  <div class="sh" style="left:0.00px; top:0.00px; width:1280.32px; height:312.01px; justify-content:flex-start"><img src="v2/p003.webp" alt=""></div>
+  <div class="sh" style="left:687.17px; top:627.17px; width:174.36px; height:56.66px; justify-content:flex-start"><img src="v2/p004.webp" alt=""></div>
+</template>
+
+<template data-master="yellow_5f_ciml">
+  <div class="sh" style="left:1120.63px; top:13.03px; width:131.10px; height:75.59px; justify-content:flex-start"><img src="v2/p000.webp" alt=""></div>
+  <div class="sh" style="left:1212.60px; top:720.23px; width:41.57px; height:11.30px; transform:rotate(-90.000deg); transform-origin:0 0; background:#f08a00; padding-top:5.72px; padding-bottom:5.72px; padding-left:11.43px; padding-right:11.43px; justify-content:center"></div>
+  <div class="sh" style="left:0.00px; top:41.48px; width:94.43px; height:11.30px; background:#f08a00; padding-top:5.72px; padding-bottom:5.72px; padding-left:11.43px; padding-right:11.43px; justify-content:center"></div>
+  <div class="sh" style="left:1222.15px; top:675.23px; width:153.10px; height:44.86px; padding-top:5.72px; padding-bottom:5.72px; padding-left:11.43px; padding-right:11.43px">
+    <div class="tx">
+      <p style="line-height:1.200; font-size:29.04px"><span style="font-size:24.04px"><span class=pn></span></span></p>
+    </div>
+  </div>
+</template>
+
+
+<div class="reveal">
+  <div class="slides">
+
+
+    <!-- ======================================================================== -->
+    <!-- Slide 1: Naive Binding Affinity Shapes Clonal Selection and Evolution in the B-cell Response to SARS-CoV-2 vaccination
+         [odp slide 1, layout cover] -->
+    <!-- ======================================================================== -->
+    <section class="slide" data-master="titlepage" data-orig="1">
+      <div class="stage layout-cover">
+        <div class="cover-text">
+          <h1 class="title">Stochasticity and Reproducibility in the Antibody Response</h1>
+          <p class="author"><span style="font-size:1.00em; font-weight:700; color:#000000">Thomas Dupic</span></p>
+          <p class="event"><span style="font-size:1.00em; font-style:italic; color:#000000">November 9th 2026</span><span style="font-size:1.00em; font-style:italic; color:#000000; position:relative;top:-0.33em; font-size:58%">th</span><span style="font-size:1.00em; font-style:italic; color:#000000"> Centuri seminar</span></p>
+        </div>
+
+        <!-- <div class="sh" style="left:272.91px; top:595.48px; width:113.68px; height:103.30px; justify-content:flex-start"><img src="v2/p005.webp" alt=""></div> -->
+
+        <!-- <div class="sh" style="left:888.70px; top:600.88px; width:108.70px; height:101.84px; justify-content:flex-start"><img src="v2/p006.webp" alt=""></div> -->
+      </div>
+    </section>
+
+
+    <!-- ======================================================================== -->
+    <!-- Slide 2: Antibodies & Antigens
+         [hand-built, layout cases] -->
+    <!-- ======================================================================== -->
+
+<section class="slide" data-master="yellow_5f_ciml">
+  <div class="stage layout-cases">
+    <h2 class="title">Antibodies &amp; Antigens</h2>
+
+    <div class="lead-row">
+      <figure class="fig" style="transform:scale(1.5); transform-origin:left center;margin-left:-50px">
+        <img src="v2/scene_pair.svg" alt="an antibody bound to an antigen, beside a B cell carrying the same antibody on its surface">
+      </figure>
+      <div class="claim fit" style="margin-left:200px">
+        <div class="tx">
+          <p>Antibodies are proteins expressed by B-cells that <em>recognise antigens</em> through binding<br> </p>
+        </div>
+      </div>
+    </div>
+
+    <div class="case-row">
+      <div class="case fragment fade-in" data-fragment-index="0">
+        <figure class="fig"><img src="v2/scene_virus.svg" alt="antibodies coating a virus"></figure>
+        <p><b>Neutralise viruses</b></p>
+      </div>
+      <div class="case fragment fade-in" data-fragment-index="1">
+        <figure class="fig"><img src="v2/scene_clump.svg" alt="antibodies clumping around a toxin"></figure>
+        <p><b>Clump small proteins</b></p>
+      </div>
+      <div class="case fragment fade-in" data-fragment-index="2">
+        <figure class="fig"><img src="v2/scene_cell.svg" alt="antibodies bound to a cell surface"></figure>
+        <p><b>Tag cells</b></p>
+      </div>
+    </div>
+    </section>
+
+    <!-- ======================================================================== -->
+    <!-- Slide 3: Antibodies can be created against virtually any antigen...
+         [hand-built, layout figure] -->
+    <!-- ======================================================================== -->
+    <section class="slide" data-master="yellow_5f_ciml">
+      <div class="stage layout-figure">
+        <h2 class="title">Antibodies can be created against virtually any antigen...</h2>
+
+        <figure class="fig">
+          <img src="v2/seroconversion_primary.svg"
+               alt="fraction of people who make antibodies on first encounter, by vaccine">
+        </figure>
+      </div>
+    </section>
+
+
+    <!-- ======================================================================== -->
+    <!-- Slide 4: ... in less than two weeks
+         [hand-built, layout figure] -->
+    <!-- ======================================================================== -->
+    <section class="slide" data-master="yellow_5f_ciml">
+      <div class="stage layout-figure">
+        <h2 class="title">... in less than two weeks</h2>
+
+        <figure class="fig">
+          <img src="v2/timing_bnt162b2.svg"
+               alt="Timing of the antibody response">
+        </figure>
+      </div>
+    </section>
+
+
+    <!-- ======================================================================== -->
+    <!-- Slide 5: We all create unique antibodies
+         [hand-built, layout split] -->
+    <!-- ======================================================================== -->
+    <section class="slide" data-master="yellow_5f_ciml">
+      <div class="stage layout-split" style="--fig:1.15fr">
+         <h2 class="title">Antibodies are very diverse</h2>
+
+        <figure class="fig" style="margin-left:-150px;">
+          <img src="v2/spike_overlay.png"
+               alt="five antibody Fab fragments from different structures, superposed on one copy of the SARS-CoV-2 receptor-binding domain">
+        </figure>
+
+
+
+	
+        <div class="side fit">
+          <div class="tx">
+            <div class="block">
+              <p> All antibody repertoires are different and no two antibody responses are the same </p>
+            </div>
+	    <div class="block fragment fade-in" data-fragment-index="0">
+              <p> How do we get a reproducible response despite producing very different antibodies ?</p>
+            </div>
+
+          </div>
+        </div>
+	
+        <footer class="cite-slot">
+          Fabs from PDB 7M7W (Starr <i>et al.</i>, Nature 2021), 7JX3 (S309, S2H14; Piccoli <i>et al.</i>, Cell 2020)
+          and 7CHO (P5A-1D2; Zhang <i>et al.</i>, Nat. Commun. 2021), superposed on one copy of the
+          receptor-binding domain (grey) and rendered in ChimeraX.
+        </footer>
+      </div>
+    </section>
+
+
+    <!-- ======================================================================== -->
+    <!-- Slide 6: Monte-Carlo optimization
+         [odp slide 3, layout canvas] -->
+    <!-- ======================================================================== -->
+    <section class="slide" data-master="yellow_5f_ciml" data-orig="3">
+      <div class="stage layout-panels">
+        <h2 class="title">Monte-Carlo optimization</h2>
+
+        <div class="rows">
+          <div class="row" style="flex:0 0 52px">
+            <div class="panel text" style="flex-grow:1">
+              <div class="ptext"><div class="tx">
+                <div class="block"><p>For this to work, the immune system relies on two mechanisms</p></div>
+              </div></div>
+            </div>
+          </div>
+
+                <div class="row" style="flex-grow:1">
+            <div class="panel beside fragment semi-fade-out" data-fragment-index="1"
+                 style="flex-grow:1; --fig:0.62fr">
+              <figure class="fig fragment fade-in" data-fragment-index="0"><img src="v2/p007.svg"
+                    alt="many antibodies, each a different colour"></figure>
+              <div class="ptext fit">
+                <div class="tx">
+                  <div class="block fragment fade-in" data-fragment-index="0">
+                    <p><b><i>V(D)J recombination:</i></b> creates a huge starting diversity,
+                       randomly generated and antigen-independent</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="row" style="flex-grow:1">
+            <div class="panel beside reverse" style="flex-grow:1; --fig:0.62fr">
+              <figure class="fig fragment fade-in" data-fragment-index="1"><img src="v2/p008.svg"
+                    alt="antibodies climbing a fitness landscape toward its optimum"></figure>
+              <div class="ptext fit">
+                <div class="tx">
+                  <div class="block fragment fade-in" data-fragment-index="1">
+                    <p><b><i>Affinity maturation:</i></b> a local optimization in reaction
+                       to a specific antigen</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+    <!-- ======================================================================== -->
+    <!-- Slide: The V(D)J recombination process  [pulled in from slides/vj.js] -->
+    <!-- ======================================================================== -->
+    <script src="slides/vj.js"></script>
+
+
+<!-- ======================================================================== -->
+<!-- Slide 8: The V(D)J recombination process (2)
+     [odp slide 4, layout text] -->
+<!-- ======================================================================== -->
+<section class="slide" data-master="yellow_5f_ciml">
+  <div class="stage layout-panels">
+    <h2 class="title">The V(D)J recombination process</h2>
+
+    <div class="rows">
+      <div class="row" style="flex-grow:1.6">
+        <div class="panel fig" style="flex-grow:1">
+          <figure class="fig"><img src="v2/entropy_bcell.png"
+                alt="entropy of the V(D)J recombination process, split into gene choice, insertions and deletions"></figure>
+        </div>
+      </div>
+
+      <div class="row" style="flex-grow:1">
+        <div class="panel text" style="flex-grow:1">
+          <div class="ptext fit">
+            <div class="tx">
+              <div class="block">
+                <p>In any one individual, there's an estimated <b>10<sup>11</sup></b> different antibodies</p>
+              </div>
+              <div class="block fragment fade-in">
+                <p>Random process &ne; Uniform process : Short antibodies can be generated every hour but most antibodies will be generated
+                   only once across the entire human population. <b>Public</b> vs <b>Private</b> antibodies.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+       <footer class="cite-slot">Mora &amp; Walczak, arXiv:1604.00487</footer>
+  </div>
+</section>
+
+<!-- ======================================================================== -->
+<!-- Slide 9: Germinal centers host affinity maturation
+     [odp slide 6, layout split] -->
+<!-- ======================================================================== -->
+<section class="slide" data-master="yellow_5f_ciml" data-orig="6">
+  <div class="stage layout-split reverse" style="--fig:1.6fr">
+    <h2 class="title">Germinal centers host affinity maturation</h2>
+
+    <figure class="fig"><img src="v2/p009.webp" alt=""></figure>
+
+    <div class="side fit">
+      <div class="tx">
+        <div class="block">
+          <p>After interacting with a cognate antigen, B-cells move to the lymph node to form germinal centers.</p>
+        </div>
+      </div>
+    </div>
+
+    <footer class="cite-slot">
+      <p>Laboratory of Lymphocyte Dynamics of The Rockefeller University</p>
+    </footer>
+  </div>
+</section>
+
+
+  <!-- ======================================================================== -->
+<!-- Slide 10: Affinity Maturation is an evolutionary-like process
+     [odp slide 7, layout canvas] -->
+<!-- ======================================================================== -->
+<section class="slide" data-master="yellow_5f_ciml" data-orig="7">
+  <div class="stage layout-canvas">
+    <h2 class="title">Affinity Maturation is an evolutionary-like process</h2>
+
+    <div class="canvas">
+      <!-- stage 1 of the main figure, visible from the start -->
+      <div class="sh" style="left:64px; top:104px; width:1152px;">
+        <img src="v2/gc_evo_1.svg" alt="">
+      </div>
+      <!-- stage 2 and 3 stack on top of it, same position -->
+      <div class="sh fragment fade-in" data-fragment-index="1"
+           style="left:64px; top:104px; width:1152px; ">
+        <img src="v2/gc_evo_2.svg" alt="">
+      </div>
+      <div class="sh fragment fade-in" data-fragment-index="2"
+           style="left:64px; top:104px; width:1152px; ">
+        <img src="v2/gc_evo_3.svg" alt="">
+      </div>
+
+      <!-- bottom left, appears between stage 1 and 2 -->
+      <div class="sh fragment fade-in" data-fragment-index="0"
+           style="left:64px; top:470px; width:220px;">
+        <div style="flex:1; min-height:0"><img src="v2/antibodies_sommut.png" alt=""
+             style="width:100%; height:100%; object-fit:contain; display:block"></div>
+        <p class="cite">Janeway&#39;s Immunobiology, Murphy &amp; Travers, Pearson</p>
+      </div>
+
+      <!-- bottom right, appears between stage 2 and 3 -->
+      <div class="sh fragment fade-in" data-fragment-index="1"
+           style="left:450px; top:510px; width:220px;">
+        <div style="flex:1; min-height:0"><img src="v2/gc_light_vs_dark.png" alt=""
+             style="width:100%; height:100%; object-fit:contain; display:block"></div>
+        <p class="cite">Research Group of Klaus Rajewsky, MDC Berlin</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+    <!-- ======================================================================== -->
+    <!-- Slide 11: Affinity Maturation is an evolutionary-like process
+         [odp slide 8, layout two] -->
+    <!-- ======================================================================== -->
+      <section class="slide" data-master="yellow_5f_ciml" data-orig="8">
+      <div class="stage layout-two" style="--a:0.34fr">
+        <h2 class="title">Affinity Maturation is an evolutionary-like process</h2>
+
+        <div class="lead">
+          <div class="tx">
+            <div class="block">
+              <p>Large <span style="font-weight:700">clonal lineages</span> are the output of this process</p>
+            </div>
+          </div>
+        </div>
+
+        <figure class="fig"><img src="v2/p011.webp" alt=""></figure>
+
+        <figure class="fig"><img src="v2/p010.webp" alt=""></figure>
+      </div>
+    </section>
+
+
+    <!-- ======================================================================== -->
+    <!-- Slide 12: Affinity Maturation is an evolutionary-like process
+         [odp slide 9, layout split] -->
+    <!-- ======================================================================== -->
+    <section class="slide" data-master="yellow_5f_ciml" data-orig="9">
+      <div class="stage layout-split reverse" style="--fig:0.92fr">
+        <h2 class="title">Class-switching</h2>
+
+        <figure class="fig"><img src="v2/p012.svg" alt=""></figure>
+
+              <div class="side fit">
+          <div class="tx">
+            <div class="block">
+              <p>In the germinal centers, antibodies can also class-switch into a different <em>isotype</em></p>
+            </div>
+            <div class="block" >
+              <p><b style="color:#2A78D6">IgM</b> / <b style="color:#F3C781">IgD</b> — naive B cells</p>
+              <p><b style="color:#65B5B4">IgG</b> — blood and tissues</p>
+              <p><b style="color:#CF6355">IgA</b> — mucosal surfaces</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+
+
+
+    <!-- ======================================================================== -->
+    <!-- Slide 14: Limitations of sampling (2)
+         [odp slide 10, layout panels] -->
+    <!-- ======================================================================== -->
+       <section class="slide" data-master="yellow_5f_ciml">
+      <div class="stage layout-panels">
+        <h2 class="title">Limitations of sampling</h2>
+
+        <div class="rows">
+          <!-- the statement, always visible -->
+          <div class="row" style="flex:0 0 120px">
+            <div class="panel text" style="flex-grow:1">
+              <div class="ptext fit"><div class="tx">
+                <div class="block">
+                  <p>Immunology happens in the tissues but we generally get <em>blood samples</em></p>
+                </div>
+              </div></div>
+            </div>
+          </div>
+
+          <!-- everything below the statement swaps between two layers -->
+          <div class="row" style="flex-grow:1">
+            <div style="position:relative; flex-grow:1; min-width:0">
+
+              <!-- layer 1: the main pic, in on click 1, out on click 2 -->
+              <div class="fragment fade-in fade-out" data-fragment-index="0"
+                   style="position:absolute; inset:0">
+                <div style="position:absolute; inset:0">
+                  <img src="v2/washing_machine.jpg" alt=""
+                       style="position:absolute; inset:0; width:100%; height:100%; object-fit:contain">
+                </div>
+              </div>
+
+              <!-- layer 2: figures + power-law text, in on click 2 -->
+              <div class="fragment fade-in" data-fragment-index="0"
+                   style="position:absolute; inset:0; display:flex; gap:40px; align-items:stretch">
+
+                <!-- figures: p014 first, p013 on click 3 -->
+                <div style="flex:1 1 auto; min-width:0; position:relative">
+                  <img src="v2/p014.webp" alt=""
+                       class="fragment fade-out" data-fragment-index="1"
+                       style="position:absolute; inset:0; width:100%; height:100%; object-fit:contain">
+                  <img src="v2/p013.webp" alt=""
+                       class="fragment fade-in" data-fragment-index="1"
+                       style="position:absolute; inset:0; width:100%; height:100%; object-fit:contain">
+                </div>
+<!-- power-law text, centred on the figure -->
+<div style="flex:0 0 440px; display:flex; align-items:center; min-width:0;margin-top:-120px;">
+  <div class="ptext fit" style="width:100%; display:block">
+    <div class="tx">
+      <div class="block">
+        <p>In the blood, lineages follow power-law distributions (fluctuating fitness model), largely independant of their functionality</p>
+      </div>
+    </div>
+  </div>
+</div>
+    <footer class="cite-slot">Desponds, Mora &amp; Walczak, PNAS 2016</footer>
+              </div>
+
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ======================================================================== -->
+    <!-- Slide 14: Stochasticity and Reproducibility
+         [odp slide 11, layout section] -->
+    <!-- ======================================================================== -->
+
+    <section class="slide" data-master="redslide" data-orig="11">
+      <div class="stage layout-text">
+	<h2 class="title">Stochasticity and Reproducibility</h2>
+	<div class="rows">
+          <div class="row" style="flex-grow:100">
+            <div class="ptext fit">
+              <div class="tx">
+                <div class="block">
+                  <p>Which part of this process are random, which one are reproducible ?</p>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="row" style="flex-grow:194">
+            <div class="panel beside" style="flex-grow:680; --fig:0.93fr">
+              <figure class="fig"><img src="v2/p021.webp" alt=""></figure>
+              <div class="ptext fit">
+                <div class="tx">
+                  <div class="block">
+                    <p>Can we predict the evolution of a repertoire after a challenge?</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+    
+
+
+      <!-- ======================================================================== -->
+    <!-- Slide 16: Homeostasis
+         [odp slide 13, layout figure] -->
+    <!-- ======================================================================== -->
+    <section class="slide" data-master="redslide" data-orig="13">
+      <div class="stage layout-figure">
+        <h2 class="title">Repertoire Sequencing</h2>
+
+        <div class="lead">
+          <div class="tx">
+            <div class="block">
+              <p>Longitudinal sampling on 10 individuals. Collaboration with the
+                 Yu lab at the Ragon institute, 10<sup>9</sup> B cells. Heavy &amp; Light chain.</p>
+            </div>
+          </div>
+        </div>
+
+        <figure class="fig"><img src="v2/p015.webp" alt=""></figure>
+      </div>
+    </section>
+
+       <!-- ======================================================================== -->
+    <!-- Slide 17: Repertoires are statistically very similar
+         [odp slide 14, layout canvas] -->
+    <!-- ======================================================================== -->
+    <section class="slide" data-master="redslide" data-orig="14">
+      <div class="stage layout-canvas">
+        <h2 class="title">Repertoires are statistically very similar</h2>
+
+        <div class="canvas">
+          <div class="sh" style="left:102.30px; top:110.12px; width:1074.72px; height:295.27px; justify-content:center"><img src="v2/p016.webp" alt=""></div>
+
+          <div class="sh fit" style="left:480.15px; top:403.19px; width:741.86px; height:258.64px">
+            <div class="tx">
+              <p style="margin-top:18.84px; line-height:1.380; font-size:42.59px; padding-left:54.9px"> The general distribution of antibody properties (length, gene fragment usage) are generally conserved between individuals. </br> "Commonality despite diversity"  </p>
+            </div>
+          </div>
+
+          <div class="sh" style="left:31.78px; top:354.63px; width:442.79px; height:347.22px; justify-content:center"><img src="v2/p017.webp" alt=""></div>
+        </div>
+
+        <footer class="cite-slot">
+          <p class="cite">Briney <i>et al.</i>, Nature (2019)</p>
+        </footer>
+      </div>
+    </section>
+
+    <!-- ======================================================================== -->
+    <!-- Slide 18: Repertoires look stable over time
+         [odp slide 15, layout figure] -->
+    <!-- ======================================================================== -->
+    <section class="slide" data-master="redslide" data-orig="15">
+      <div class="stage layout-figure">
+        <h2 class="title">Repertoires are stable over time</h2>
+
+        <figure class="fig"><img src="v2/p018.webp" alt=""></figure>
+      </div>
+    </section>
+
+
+    <!-- ======================================================================== -->
+    <!-- Slide 19: The repertoire is stable over time
+         [odp slide 16, layout two] -->
+    <!-- ======================================================================== -->
+    <section class="slide" data-master="redslide" data-orig="16">
+      <div class="stage layout-figure">
+        <h2 class="title">Repertoires are stable over time</h2>
+
+        <figure class="fig"><img src="v2/umap_repertoire.svg" alt=""></figure>
+
+        <!-- <figure class="fig"><img src="v2/p020.webp" alt=""></figure> -->
+      </div>
+    </section>
+
+    <section class="slide" data-master="redslide" data-orig="16">
+      <div class="stage layout-figure">
+        <h2 class="title">Stability is maintained through turnover</h2>
+
+        <figure class="fig"><img src="v2/p020.webp" alt=""></figure>
+      </div>
+    </section>
+
+    <section class="slide" data-master="redslide" data-orig="16">
+      <div class="stage layout-text">
+        <h2 class="title">Predicting the antibody immune response</h2>
+
+        <div class="body">
+          <div class="tx">
+            <div class="block">
+              <div class="points">
+                <div>☑ The general properties of the repertoire are not impacted by vaccination.</div>
+				</br>
+                <div style="visibility:hidden">☑ Identical naive clones in different individuals tend
+                  to acquire the same mutations, but do not follow the same long-term trajectories.</div>
+				</br>
+                <div style="visibility:hidden">☑ Affinity maturation is highly selective, but the
+                     antibody landscape is complex.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+
+    <!-- ======================================================================== -->
+    <!-- Slide 21: Shared clonal lineages as “independent replicates”
+         [odp slide 18, layout two] -->
+    <!-- ======================================================================== -->
+    <section class="slide" data-master="redslide" data-orig="18">
+      <div class="stage layout-two">
+        <h2 class="title">Looking at the convergent response</h2>
+
+        <div class="lead fit">
+          <div class="tx">
+            <div class="block">
+              <p>Shared lineages = &nbsp;same unmutated ancestor</p>
+            </div>
+          </div>
+        </div>
+
+        <figure class="fig"><img src="v2/p023.webp" alt=""></figure>
+
+        <figure class="fig"><img src="v2/p024.webp" alt=""></figure>
+      </div>
+    </section>
+
+
+    
+    <!-- ======================================================================== -->
+    <!-- Slide 22: Shared lineages are enriched for response signature
+         [odp slide 19, layout panels] -->
+    <!-- ======================================================================== -->
+    <section class="slide" data-master="redslide" data-orig="19">
+      <div class="stage layout-panels">
+        <h2 class="title">Shared lineages are enriched for response signature</h2>
+
+        <div class="rows">
+          <div class="row" style="flex:0 0 110px">
+            <div class="panel text" style="flex-grow:1">
+              <div class="ptext"><div class="tx">
+                <div class="block">
+                  <p><b style="color:#3a9360">Public clones</b> = shared with the healthy controls</p>
+                  <p><b style="color:#3370a3">Convergent clones</b> = shared within the cohort</p>
+                </div>
+              </div></div>
+            </div>
+          </div>
+
+          <div class="row" style="flex-grow:1">
+            <div class="panel fig fragment fade-in" data-fragment-index="0" style="flex-grow:1">
+              <figure class="fig"><img src="v2/p027.webp"
+                    alt="cumulative distribution of clonal lineage size, private vs convergent vs public"></figure>
+            </div>
+            <div class="panel fig fragment fade-in" data-fragment-index="1" style="flex-grow:1">
+              <figure class="fig"><img src="v2/p025.webp"
+                    alt="mean mutations per sequence, private vs convergent vs public"></figure>
+            </div>
+            <div class="panel fig fragment fade-in" data-fragment-index="2" style="flex-grow:1">
+              <figure class="fig"><img src="v2/p026.webp"
+                    alt="percentage of clonotypes by number of timepoints present"></figure>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+    
+
+    <!-- ======================================================================== -->
+    <!-- Slide 20: Shared lineages as replicate experiments
+         [odp slide 17, layout panels] -->
+    <!-- ======================================================================== -->
+    <section class="slide" data-master="redslide" data-orig="17">
+      <div class="stage layout-panels">
+        <h2 class="title">Shared lineages as replicate experiments ?</h2>
+
+        <div class="rows">
+          <div class="row" style="flex-grow:194">
+            <div class="panel beside" style="flex-grow:680; --fig:0.93fr">
+              <figure class="fig"><img src="v2/p021.webp" alt=""></figure>
+              <div class="ptext fit">
+                <div class="tx">
+                  <div class="block">
+                    <p>Can we predict the evolution of the repertoire after a challenge?</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="row" style="flex-grow:227">
+            <div class="panel beside" style="flex-grow:1099; --fig:1.43fr">
+              <figure class="fig fragment fade-in" data-fragment-index="0"><img src="v2/p022.webp" alt=""></figure>
+              <div class="ptext fit">
+                <div class="tx">
+                  <div class="block fragment fade-in" data-fragment-index="0">
+                    <p>Will lineages with the same UCA react in the same way in different patients?</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+
+
+
+
+    <!-- ======================================================================== -->
+    <!-- Slide 23: Shared lineages show weak correlation in terms of size & growth
+         [odp slide 20, layout panels] -->
+    <!-- ======================================================================== -->
+    <section class="slide" data-master="redslide" data-orig="20">
+      <div class="stage layout-panels">
+        <h2 class="title">Shared lineages show weak correlation for size and no correlation for growth</h2>
+
+        <div class="rows">
+          <div class="row" style="flex-grow:1">
+            <div class="panel stack" style="flex-grow:1">
+              <figure class="fig"><img src="v2/G_convergent_size.svg" alt=""></figure>
+              <figure class="fig" ><img src="v2/G_convergent_growth.svg" alt=""></figure>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+
+        <!-- ======================================================================== -->
+    <!-- Slide 24: Shared lineages develop into the same isotypes
+         [odp slide 21, layout figure] -->
+    <!-- ======================================================================== -->
+    <section class="slide" data-master="redslide" data-orig="21">
+      <div class="stage layout-figure">
+        <h2 class="title">Shared lineages develop into the same isotypes</h2>
+
+        <figure class="fig"><img src="v2/H_isotype_transition.svg" alt=""></figure>
+      </div>
+    </section>
+
+
+    
+    <!-- ======================================================================== -->
+    <!-- Slide 25: Shared lineages get the same mutations
+         [odp slide 22, layout text] -->
+    <!-- ======================================================================== -->
+   <section class="slide" data-master="redslide" data-orig="22">
+      <div class="stage layout-split reverse" style="--fig:1.4fr">
+        <h2 class="title">Shared lineages get the same mutations</h2>
+
+        <figure class="fig"><img src="v2/E_shared_mutations_binary.svg" alt=""></figure>
+
+        <div class="side fit">
+          <div class="tx">
+            <div class="block">
+              <p>Lineages sharing the same unmutated ancestor
+                 accumulate the same mutations</p>
+            </div>
+	    
+            <div class="block fragment fade-in" data-fragment-index="0">
+              <p>Well known in mice model (W33L in NP vaccination), but much less observed in humans</p>
+            </div>
+
+          </div>
+        </div>
+      </div>
+   </section>
+
+   <section class="slide" data-master="redslide" data-orig="16">
+      <div class="stage layout-text">
+        <h2 class="title">Predicting the antibody immune response</h2>
+
+        <div class="body">
+          <div class="tx">
+            <div class="block">
+              <div class="points">
+                <div>☑ The general properties of the repertoire are not impacted by vaccination.</div>
+		</br>
+		<div>☑ Identical naive clones in different individuals tend
+                  to acquire the same mutations, but do not follow the same long-term trajectories.</div>
+				</br>
+                <div style="visibility:hidden">☑ Affinity maturation can be highly selective, but the
+                     antibody landscape is complex.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+
+    <!-- ======================================================================== -->
+    <!-- Slide 26: This convergence goes away when the lineages differ
+         [odp slide 23, layout text] -->
+    <!-- ======================================================================== -->
+    <section class="slide" data-master="redslide" data-orig="23">
+      <div class="stage layout-text">
+        <h2 class="title">The convergence disappears when the ancestors start to differ</h2>
+        <figure class="fig"><img src="v2/E_shared_mutations_vs_hamming.svg" alt=""></figure>
+      </div>
+    </section>
+
+   
+
+        <!-- ======================================================================== -->
+    <!-- Slide: How strong is the selection? — hinge into the tree analysis -->
+    <!-- ======================================================================== -->
+    <section class="slide" data-master="redslide">
+      <div class="stage layout-text">
+        <h2 class="title">How strong is selection during affinity maturation? </h2>
+
+        <div class="body">
+	   <div class="lead">
+          <div class="tx">
+            <div class="block">
+              <p>	  The shapes of the trees are a marker of selection </p>
+            </div>
+          </div>
+        </div>
+
+	          <figure class="fig"><img src="v2/p010.webp" alt=""></figure>
+	  
+        </div> 
+      </div>
+    </section>
+
+
+
+
+    <!-- ======================================================================== -->
+    <!-- Slide 28: Summary statistic: the site-frequency spectrum
+         [odp slide 25, layout text] -->
+    <!-- ======================================================================== -->
+    <section class="slide" data-master="redslide" data-orig="25">
+      <div class="stage layout-figure">
+        <h2 class="title">The site-frequency spectrum</h2>
+         <figure class="fig"><img src="v2/tree_to_sfs.svg" alt=""></figure>
+      </div>
+    </section>
+
+
+
+    <!-- ======================================================================== -->
+    <!-- Slide 29: Evolutionary modelling
+         [odp slide 26, layout text] -->
+    <!-- ======================================================================== -->
+    <section class="slide" data-master="redslide" data-orig="26">
+       <div class="stage layout-figure">
+        <h2 class="title">The site-frequency spectrum shows signs of strong selection </h2>
+         <figure class="fig"><img src="v2/X_sfs_all.svg" alt=""></figure>
+      </div>
+    </section>
+
+
+     <!-- ======================================================================== -->
+    <!-- Slide 30: Evolutionary modelling
+         [layout split] -->
+    <!-- ======================================================================== -->
+    <section class="slide" data-master="redslide">
+      <div class="stage layout-split" style="--fig:1.3fr">
+        <h2 class="title">Sweep mutations are selected for</h2>
+
+        <figure class="fig"><img src="v2/sfs_fit.png" alt=""></figure>
+
+        <div class="side fit">
+          <div class="tx">
+            <div class="block">
+              <p>Wright-Fisher model with selection and finite-size, fitted by
+                 Approximate Bayesian Computation</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    
+
+    <!-- ======================================================================== -->
+    <!-- Slide 30: Sweep mutations are a strong marker of selection
+         [odp slide 27, layout text] -->
+    <!-- ======================================================================== -->
+    <section class="slide" data-master="redslide" data-orig="27">
+      <div class="stage layout-text">
+        <h2 class="title">Sweep mutations are a strong marker of selection</h2>
+        <figure class="fig"><img src="v2/E_shared_sweep_vs_hamming.svg" alt=""></figure>
+      </div>
+    </section>
+
+
+   <section class="slide" data-master="redslide" data-orig="16">
+      <div class="stage layout-text">
+        <h2 class="title">Predicting the antibody immune response</h2>
+
+        <div class="body">
+          <div class="tx">
+            <div class="block">
+              <div class="points">
+                <div>☑ The general properties of the repertoire are not impacted by vaccination.</div>
+		</br>
+		<div>☑ Identical naive clones in different individuals tend
+                  to acquire the same mutations, but do not follow the same long-term trajectories.</div>
+				</br>
+                <div>☑ Affinity maturation can be highly selective, but the
+                     antibody landscape is complex.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+
+
+    <!-- ======================================================================== -->
+    <!-- Slide 33: Transition slide
+         [odp slide 30, layout section] -->
+    <!-- ======================================================================== -->
+  <!-- ======================================================================== -->
+    <!-- Slide 33: lead-in to part two
+         [odp slide 30] -->
+   <!-- ======================================================================== -->
+
+ <section class="slide" data-master="blueslide">
+      <div class="stage layout-figure">
+        <h2 class="title">What about affinity ? </h2>
+
+        <figure class="fig"><img src="v2/antibody_antigen_question_mark.svg" alt=""></figure>
+      </div>
+    </section>
+   
+
+    <!-- ======================================================================== -->
+    <!-- Slide 34: Measuring specificity
+         [odp slide 31, layout canvas] -->
+    <!-- ======================================================================== -->
+    <section class="slide" data-master="blueslide" data-orig="31">
+      <div class="stage layout-canvas">
+        <h2 class="title">Measuring affinity</h2>
+
+        <div class="canvas">
+          <div class="sh fragment fade-in" data-fragment-index="2" style="left:267.56px; top:624.20px; width:700.89px; height:95.94px; justify-content:center"><img src="v2/p028.webp" alt=""></div>
+
+          <div class="sh fit fragment fade-in" data-fragment-index="2" style="left:207.43px; top:512.85px; width:843.65px; height:98.50px">
+            <div class="tx">
+              <p style="line-height:1.200; font-size:42.59px; color:#333333; padding-left:54.9px">Bulk sequencing ⇒ No heavy-light pairing ⇒ Combinatorial approach</p>
+            </div>
+          </div>
+
+          <div class="sh fragment fade-in" data-fragment-index="1" style="left:93.79px; top:196.77px; width:254.66px; height:292.03px; justify-content:center"><img src="v2/p029.webp" alt=""></div>
+
+          <div class="sh"  style="left:40.33px; top:112.58px; width:1117.02px; height:281.64px">
+            <div class="tx">
+              <p style="line-height:1.200; font-size:42.59px; color:#333333; padding-left:54.9px">In-vitro “clone” of the repertoire on yeast.</p>
+              <p style="line-height:1.200; font-size:42.59px; color:#333333; padding-left:54.9px">&nbsp;</p>
+              <p style="line-height:1.200; font-size:42.59px; color:#333333">&nbsp;</p>
+              <p style="line-height:1.200; font-size:42.59px; color:#333333">&nbsp;</p>
+              <p style="line-height:1.200; font-size:42.59px; color:#333333">&nbsp;</p>
+            </div>
+          </div>
+
+          <div class="sh"  style="left:898.80px; top:29.04px; width:175.05px; height:141.49px; justify-content:center"><img src="v2/p030.webp" alt=""></div>
+
+          <div class="sh fit fragment fade-in" data-fragment-index="0" style="left:366.24px; top:173.86px; width:793.67px; height:146.33px">
+            <div class="tx">
+              <p style="line-height:1.200; font-size:42.59px; color:#333333; padding-left:54.9px">⇒ Quantitative readout<br>⇒ Control over the antibodies tested</p>
+            </div>
+          </div>
+
+          <div class="sh fit fragment fade-in" data-fragment-index="1" style="left:401.82px; top:330.12px; width:783.93px; height:147.43px">
+            <div class="tx">
+              <p style="line-height:1.200; font-size:42.59px; color:#333333; padding-left:54.9px">We recreated the <span style="font-weight:700">inferred ancestor (UCA)</span> for the largest lineages.</p>
+              <p style="line-height:1.200; font-size:42.59px; color:#333333; padding-left:54.9px">&nbsp;</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+
+    <!-- ======================================================================== -->
+    <!-- Slide 35: Making the library
+         [odp slide 32, layout canvas] -->
+    <!-- ======================================================================== -->
+    <section class="slide" data-master="blueslide" data-orig="32">
+      <div class="stage layout-canvas">
+        <h2 class="title">Making the library</h2>
+
+        <div class="canvas">
+          <div class="sh" style="left:59.26px; top:185.61px; width:1134.99px; height:251.65px; justify-content:center"><img src="v2/p031.webp" alt=""></div>
+
+          <div class="sh fit" style="left:129.73px; top:500.78px; width:1022.13px; height:121.09px">
+            <div class="tx">
+              <p style="margin-top:18.84px; line-height:1.380; font-size:42.59px; color:#333333; padding-left:54.9px">We focus on the <span style="font-weight:700">10’000 largest clonal lineages</span>. </p>
+            </div>
+          </div>
+
+          <div class="sh fit" style="left:563.24px; top:558.58px; width:599.78px; height:121.09px">
+            <div class="tx">
+              <p style="margin-top:18.84px; line-height:1.380; color:#333333; padding-left:54.9px; font-size:32.26px"><span style="font-size:32.26px">(still a very small part of the overall repertoire ~ 0.1%)</span></p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+
+    <!-- ======================================================================== -->
+    <!-- Slide 36: Measuring Affinities in High-Throughput
+         [odp slide 33, layout canvas] -->
+    <!-- ======================================================================== -->
+    <section class="slide" data-master="blueslide" data-orig="33">
+      <div class="stage layout-canvas">
+        <h2 class="title">Measuring Affinities in High-Throughput</h2>
+
+        <div class="canvas">
+          <div class="sh fragment fade-in" data-fragment-index="0" style="left:113.55px; top:144.78px; width:1008.05px; height:501.37px; justify-content:center"><img src="v2/p032.webp" alt=""></div>
+
+          <div class="sh" style="left:113.55px; top:144.78px; width:1008.05px; height:258.87px; justify-content:center"><img src="v2/p033.webp" alt=""></div>
+
+          <div class="sh fragment fade-out" data-fragment-index="0" style="left:911.10px; top:312.33px; width:116.06px; height:88.90px; background:#ffffff; padding-top:5.72px; padding-bottom:5.72px; padding-left:11.43px; padding-right:11.43px; justify-content:center"></div>
+        </div>
+      </div>
+    </section>
+
+
+    <!-- ======================================================================== -->
+    <!-- Slide 37: Measuring Affinities in High-Throughput
+         [odp slide 34, layout two] -->
+    <!-- ======================================================================== -->
+    <section class="slide" data-master="blueslide" data-orig="34">
+      <div class="stage layout-two">
+        <h2 class="title">Measuring Affinities in High-Throughput</h2>
+
+        <figure class="fig"><img src="v2/p034.webp" alt=""></figure>
+
+        <figure class="fig"><img src="v2/p035.webp" alt=""></figure>
+      </div>
+    </section>
+
+
+    <!-- ======================================================================== -->
+    <!-- Slide 38: 2% of these lineages bind the RBD
+         [odp slide 35, layout two] -->
+    <!-- ======================================================================== -->
+    <section class="slide" data-master="blueslide" data-orig="35">
+      <div class="stage layout-two">
+        <h2 class="title">2% of these lineages bind the RBD</h2>
+
+        <figure class="fig"><img src="v2/p036.webp" alt=""></figure>
+
+        <figure class="fig fragment fade-in" data-fragment-index="0"><img src="v2/p037.webp" alt=""></figure>
+
+        <footer class="cite-slot fragment fade-in" data-fragment-index="0">
+          <p class="cite"><span>Goel, Rishi R. et al. </span><span>Science (2021) </span></p>
+        </footer>
+      </div>
+    </section>
+
+
+    <!-- ======================================================================== -->
+    <!-- Slide 39: Unmutated ancestors span a wide affinity range
+         [odp slide 36, layout figure] -->
+    <!-- ======================================================================== -->
+    <section class="slide" data-master="blueslide" data-orig="36">
+      <div class="stage layout-figure">
+        <h2 class="title">Unmutated ancestors span a wide affinity range</h2>
+
+        <figure class="fig"><img src="v2/p038.webp" alt=""></figure>
+      </div>
+    </section>
+
+
+     <!-- ======================================================================== -->
+    <!-- Slide 40: Binders come from across the repertoire
+         [odp slide 37, layout two] -->
+    <!-- ======================================================================== -->
+    <section class="slide" data-master="blueslide" data-orig="37">
+      <div class="stage layout-two">
+        <h2 class="title">Binders come from across the repertoire</h2>
+
+        <figure class="fig"><img src="v2/p039.webp" alt=""></figure>
+
+        <figure class="fig fragment fade-in" data-fragment-index="1"><img src="v2/p040.webp" alt=""></figure>
+
+        <div class="caption fit" style="grid-area:cap; grid-column:1">
+          <div class="tx">
+            <div class="block">
+              <p style="text-align:center">Slightly skewed V-gene distribution</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="caption fit fragment fade-in" data-fragment-index="1" style="grid-area:cap; grid-column:2">
+          <div class="tx">
+            <div class="block">
+              <p style="text-align:center">Binders tend to be shorter</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+     <!-- ======================================================================== -->
+    <!-- Slide 41: Binder lineages have a response signature
+         [odp slide 38, layout two] -->
+    <!-- ======================================================================== -->
+    <section class="slide" data-master="blueslide" data-orig="38">
+      <div class="stage layout-two">
+        <h2 class="title">Binder lineages have a response signature</h2>
+
+        <figure class="fig"><img src="v2/p042.webp" alt=""></figure>
+
+        <figure class="fig fragment fade-in" data-fragment-index="1"><img src="v2/p041.webp" alt=""></figure>
+
+        <div class="caption fit" style="grid-area:cap; grid-column:1">
+          <div class="tx">
+            <div class="block">
+              <p style="text-align:center">Binder lineages are larger</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="caption fit fragment fade-in" data-fragment-index="1" style="grid-area:cap; grid-column:2">
+          <div class="tx">
+            <div class="block">
+              <p style="text-align:center">Binder lineages are more often class-switched</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ======================================================================== -->
+    <!-- Slide 42: Binder lineages are shared and persistent
+         [odp slide 39, layout canvas] -->
+    <!-- ======================================================================== -->
+    <section class="slide" data-master="blueslide" data-orig="39">
+      <div class="stage layout-canvas">
+        <h2 class="title">Binder lineages are shared and persistent</h2>
+
+        <div class="canvas">
+          <div class="sh" style="left:158.13px; top:129.32px; width:402.46px; height:544.59px; justify-content:center"><img src="v2/p043.webp" alt=""></div>
+
+          <div class="sh fragment fade-in" data-fragment-index="1" style="left:789.65px; top:408.13px; width:324.90px; height:247.58px; justify-content:center"><img src="v2/p044.webp" alt=""></div>
+
+          <div class="sh fragment fade-in" data-fragment-index="0" style="left:779.36px; top:94.66px; width:331.99px; height:276.61px; justify-content:center"><img src="v2/p045.webp" alt=""></div>
+
+          <div class="sh fragment fade-in" data-fragment-index="1" style="left:894.18px; top:651.41px; width:34.53px; height:33.29px; justify-content:center"><img src="v2/p046.webp" alt=""></div>
+
+          <div class="sh fragment fade-in" data-fragment-index="1" style="left:968.59px; top:652.87px; width:34.57px; height:33.29px; justify-content:center"><img src="v2/p046.webp" alt=""></div>
+        </div>
+      </div>
+    </section>
+
+
+    <!-- ======================================================================== -->
+    <!-- Slide NN: [title]
+         [layout figure] -->
+    <!-- ======================================================================== -->
+    <section class="slide" data-master="blueslide">
+      <div class="stage layout-figure">
+        <h2 class="title">AI doesn't perform well on naive antibodies </h2>
+
+        <figure class="fig"><img src="v2/K_iptm_binders.svg" alt=""></figure>
+      </div>
+    </section>
+
+ <!-- ======================================================================== -->
+    <!-- Slide NN: [title]
+         [layout figure] -->
+    <!-- ======================================================================== -->
+    <section class="slide" data-master="blueslide">
+      <div class="stage layout-figure">
+        <h2 class="title">AI doesn't perform well on naive antibodies </h2>
+
+        <figure class="fig"><img src="v2/K_iptm_binders.svg" alt=""></figure>
+      </div>
+    </section>
+
+
+
+    <!-- ======================================================================== -->
+    <!-- Slide NN: Summary
+         [layout text] -->
+    <!-- ======================================================================== -->
+    <section class="slide" data-master="yellow_5f_ciml">
+      <div class="stage layout-text">
+        <h2 class="title">Summary</h2>
+
+        <div class="body fit">
+          <div class="tx">
+            <div class="block">
+              <p><em>Naive binding affinity shapes clonal selection:</em>
+                 lineages with higher germline affinity are selected earlier
+                 and expand more</p>
+            </div>
+            <div class="block">
+              <p><em>Despite a random generation process, responses are reproducible:</em>
+                 shared lineages follow the same trajectories in different individuals</p>
+            </div>
+            <div class="block">
+              <p><em>Simple evolutionary models capture the dynamics</em> —
+                 and let us measure selection from sequencing data alone</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+    
+    
+
+    <!-- ======================================================================== -->
+    <!-- Slide 78: THANKS !
+         [backup, odp slide 75, layout canvas] -->
+    <!-- ======================================================================== -->
+    <section class="slide backup" data-master="yellow_5f_ciml" data-orig="75">
+      <div class="stage layout-canvas">
+        <h2 class="title">THANKS !</h2>
+
+        <div class="canvas">
+          <div class="sh" style="left:347.22px; top:383.94px; width:110.53px; height:109.16px; justify-content:flex-start"><img src="v2/p065.webp" alt=""></div>
+
+          <div class="sh" style="left:672.44px; top:370.04px; width:109.34px; height:254.07px; justify-content:flex-start"><img src="v2/p066.webp" alt=""></div>
+
+          <div class="sh" style="left:560.59px; top:160.10px; width:110.57px; height:209.53px; justify-content:flex-start"><img src="v2/p067.webp" alt=""></div>
+
+          <div class="sh" style="left:560.59px; top:370.45px; width:110.57px; height:119.99px; justify-content:flex-start"><img src="v2/p068.webp" alt=""></div>
+
+          <div class="sh" style="left:566.44px; top:488.93px; width:100.70px; height:103.94px; justify-content:flex-start"><img src="v2/p069.webp" alt=""></div>
+
+          <div class="sh" style="left:353.21px; top:491.95px; width:100.70px; height:93.97px; justify-content:flex-start"><img src="v2/p070.webp" alt=""></div>
+
+          <div class="sh fit" style="left:41.34px; top:161.15px; width:289.10px; height:469.45px; padding-top:11.62px; padding-bottom:11.62px; padding-left:11.62px; padding-right:11.62px; justify-content:flex-start">
+            <div class="tx">
+              <p style="text-align:left; margin-bottom:19.34px; line-height:1.380; font-size:35.49px"><span style="font-size:35.49px; color:#595959">Tatiana Ruiz-Bedoya</span><span style="font-size:35.49px; color:#595959"><br></span><span style="font-size:35.49px; color:#595959">Giulio Isacchini</span><span style="font-size:35.49px; font-weight:700; color:#595959"><br></span><span style="font-size:35.49px; color:#595959">Angela Phillips</span><span style="font-size:35.49px; font-weight:700; color:#595959"><br></span><span style="font-size:35.49px; color:#595959">Zach Montague</span><span style="font-size:35.49px; font-weight:700; color:#595959"><br></span><span style="font-size:35.49px; color:#595959; font-weight:700">Natanael Spisak</span><span style="font-size:35.49px; font-weight:700; color:#595959"><br></span><span style="font-size:35.49px; color:#595959">Katherine Lawrence</span><span style="font-size:35.49px; font-weight:700; color:#595959"><br></span><span style="font-size:35.49px; color:#595959">Michael Desai</span><span style="font-size:35.49px; font-weight:700; color:#595959"><br></span><span style="font-size:35.49px; font-weight:700; color:#595959">Alexandra Poret</span><span style="font-size:35.49px; color:#595959"><br></span><span style="font-size:35.49px; font-weight:700; color:#c9211e">Alief Moulana</span><span style="font-size:35.49px; font-weight:700; color:#595959"><br></span><span style="font-size:35.49px; color:#595959">Thierry Mora</span><span style="font-size:35.49px; color:#595959"><br></span><span style="font-size:35.49px; color:#595959">Daniel Newton</span><span style="font-size:35.49px; color:#595959"><br></span><span style="font-size:35.49px; font-weight:700; color:#595959">Joao Ascensao</span><span style="font-size:35.49px; color:#595959"><br></span><span style="font-size:35.49px; color:#595959">Berk Alpay</span><span style="font-size:35.49px; color:#595959"><br></span><span style="font-size:35.49px; color:#595959">Aleksandra Walczak</span></p>
+            </div>
+          </div>
+
+          <div class="sh" style="left:693.53px; top:175.65px; width:76.18px; height:69.23px; justify-content:flex-start"><img src="v2/p005.webp" alt=""></div>
+
+          <div class="sh" style="left:693.53px; top:264.45px; width:76.18px; height:71.38px; justify-content:flex-start"><img src="v2/p006.webp" alt=""></div>
+
+          <div class="sh" style="left:456.97px; top:163.57px; width:107.78px; height:96.26px; justify-content:center"><img src="v2/p071.webp" alt=""></div>
+
+          <div class="sh" style="left:461.54px; top:265.69px; width:99.92px; height:93.47px; justify-content:center"><img src="v2/p072.webp" alt=""></div>
+
+          <div class="sh" style="left:467.35px; top:378.45px; width:98.18px; height:103.07px; justify-content:center"><img src="v2/p073.webp" alt=""></div>
+
+          <div class="sh" style="left:469.55px; top:489.07px; width:91.14px; height:105.27px; justify-content:center"><img src="v2/p074.webp" alt=""></div>
+
+          <div class="sh" style="left:346.76px; top:165.54px; width:102.02px; height:95.44px; justify-content:center"><img src="v2/p075.webp" alt=""></div>
+
+          <div class="sh" style="left:353.35px; top:267.33px; width:97.59px; height:97.36px; justify-content:center"><img src="v2/p076.webp" alt=""></div>
+
+          <div class="sh fit" style="left:850.01px; top:568.37px; width:418.88px; height:68.04px">
+            <div class="tx">
+              <p style="text-align:center; margin-top:18.84px; line-height:1.380; font-size:26.46px; padding-left:54.9px"><span style="font-style:italic; color:#2a6099">dupic@ciml.univ-mrs.fr</span></p>
+            </div>
+          </div>
+
+          <div class="sh" style="left:845.39px; top:117.52px; width:405.34px; height:405.34px; justify-content:center"><img src="v2/p077.gif" alt=""></div>
+
+          <div class="sh fit" style="left:910.65px; top:613.77px; width:418.88px; height:68.04px">
+            <div class="tx">
+              <p style="text-align:center; margin-top:18.84px; line-height:1.380; padding-left:25.9px; font-size:26.46px"><span style="font-size:26.46px; font-style:italic; color:#2a6099">www.thopic.eu</span></p>
+            </div>
+          </div>
+
+          <div class="sh fit" style="left:893.22px; top:100.42px; width:480.52px; height:207.84px">
+            <div class="tx">
+              <p style="margin-top:18.84px; line-height:1.380; font-size:42.59px; padding-left:54.9px">TD Lab</p>
+            </div>
+          </div>
+
+          <div class="sh fit" style="left:851.98px; top:168.42px; width:289.10px; height:91.73px; padding-top:11.62px; padding-bottom:11.62px; padding-left:11.62px; padding-right:11.62px; justify-content:flex-start">
+            <div class="tx">
+              <p style="text-align:left; margin-bottom:19.34px; line-height:1.380; font-size:26.46px"><span style="font-size:26.46px; color:#595959">Virginie Chatain</span><span style="font-size:26.46px; color:#595959"><br></span><span style="font-size:26.46px; color:#595959">Charlotte Réocreux</span></p>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+
+
+
+<script src="lib/reveal.js"></script>
+<script src="lib/notes.js"></script>
+<script>
+  // copy each master page's decoration into the slides that use it
+  document.querySelectorAll('section[data-master]').forEach(s => {
+    const t = document.querySelector(`template[data-master="${s.dataset.master}"]`);
+    const stage = s.querySelector('.stage');
+    if (!t || !stage) return;
+    const bg = document.createElement('div');
+    bg.className = 'bg';
+    bg.appendChild(t.content.cloneNode(true));
+    stage.prepend(bg);
+  });
+
+  const deck = new Reveal({
+    width: 1280, height: 720, margin: 0,
+    minScale: 0.2, maxScale: 2.0,
+    center: false, hash: true, controls: false, progress: true,
+    slideNumber: false, transition: 'none', backgroundTransition: 'none',
+    fragments: true, pdfSeparateFragments: false,
+    plugins: [ RevealNotes ]
+  });
+  window.deck = deck;
+
+  // "fit": shrink text that overflows its slot or box. Finds the largest
+  // zoom (0.5–1) at which the text fits, once per slide when it is shown.
+  function fitSlide(section) {
+    if (!section || section.dataset.fitted) return;
+    if (getComputedStyle(section).display === 'none') return;
+    section.querySelectorAll('.fit').forEach(box => {
+      const tx = box.querySelector('.tx');
+      if (!tx) return;
+      tx.style.zoom = 1;
+      if (box.scrollHeight <= box.clientHeight + 1) return;
+      let lo = 0.5, hi = 1;
+      for (let k = 0; k < 7; k++) {
+        const mid = (lo + hi) / 2;
+        tx.style.zoom = mid;
+        if (box.scrollHeight <= box.clientHeight + 1) lo = mid; else hi = mid;
+      }
+      tx.style.zoom = lo;
+    });
+    section.dataset.fitted = 1;
+  }
+  const fitAll = () => document.querySelectorAll('.slides > section').forEach(fitSlide);
+  deck.on('ready', e => document.fonts.ready.then(() => fitSlide(e.currentSlide)));
+  deck.on('slidechanged', e => fitSlide(e.currentSlide));
+  deck.on('pdf-ready', () => document.fonts.ready.then(fitAll));
+
+  deck.initialize().then(() => {
+    document.querySelectorAll('section.slide').forEach((s, i) => {
+      const st = s.querySelector('.stage');
+      if (st && s.dataset.orig) st.dataset.orig = 'odp ' + s.dataset.orig;
+      s.querySelectorAll('.pn').forEach(el => el.textContent = i + 1);
+    });
+  });
+  // D marks up the deck for editing: placeholders and original slide numbers
+  deck.addKeyBinding({ keyCode: 68, key: 'D', description: 'Draft marks on/off' },
+    () => document.body.classList.toggle('draft'));
+
+  // K jumps to the first backup slide (B is reveal's black-screen key)
+  deck.addKeyBinding({ keyCode: 75, key: 'K', description: 'Jump to backup slides' }, () => {
+    const first = document.querySelector('section.backup');
+    if (first) deck.slide([...document.querySelectorAll('.slides > section')].indexOf(first));
+  });
+</script>
+</body>
+</html>
